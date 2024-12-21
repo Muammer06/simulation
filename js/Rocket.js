@@ -40,32 +40,75 @@ class Rocket {
     }
 
     update(satellites) {
-        if (this.currentTargetIndex >= satellites.length) {
+        if (this.fuel <= 0) {
+            this.returnToMoon(); // Yakıt biterse Ay'a dön
             return;
         }
-
+    
+        if (this.currentTargetIndex >= satellites.length) {
+            console.log("Tüm uydular ziyaret edildi.");
+            return; // Tüm uydular ziyaret edildiyse dur
+        }
+    
         const currentTarget = satellites[this.currentTargetIndex];
-
-        // Yeni hedef için yol planla
+    
+        // Hedefe doğru ilerle
         if (!this.motion.currentPath) {
             this.motion.planPath(this, currentTarget);
         }
-
-        // Hareketi güncelle
+    
         const completed = this.motion.updatePosition(this);
-        if (completed) {
+        this.consumeFuel(); // Hareket sırasında yakıt tüketimi
+    
+        if (completed && currentTarget.fuel < 100) {
+            this.refuelSatellite(currentTarget); // Hedef uyduya yakıt aktar
             this.currentTargetIndex++;
             this.motion.reset();
         }
-
-        // İzi güncelle
-        this.updateTrail();
+    
+        this.updateTrail(); // İz güncellemesi
     }
 
+    refuelSatellite(satellite) {
+        const requiredFuel = 100 - satellite.fuel;
+        const fuelToTransfer = Math.min(requiredFuel, CONSTANTS.FUEL_TRANSFER_RATE, this.fuel);
+        satellite.fuel += fuelToTransfer;
+        this.fuel -= fuelToTransfer;
+        console.log(`Uyduya ${fuelToTransfer} yakıt transfer edildi.`);
+    }
+    
+    consumeFuel() {
+        this.fuel -= CONSTANTS.FUEL_CONSUMPTION_RATE;
+        if (this.fuel < 0) this.fuel = 0;
+        console.log(`Roket yakıtı: ${this.fuel.toFixed(2)}`);
+    }
+    
+
+    returnToMoon() {
+        if (!this.motion.currentPath) {
+            this.motion.planPath(this, { 
+                mesh: { position: new THREE.Vector3(CONSTANTS.MOON_ORBIT_RADIUS, 0, 0) }
+            });
+        }
+    
+        const completed = this.motion.updatePosition(this);
+        this.consumeFuel();
+    
+        if (completed) {
+            this.fuel = CONSTANTS.MAX_FUEL; // Ay'da yakıt doldur
+            this.motion.reset();
+            console.log("Roket Ay'a ulaştı ve yakıtı doldurdu.");
+        }
+    
+        this.updateTrail();
+    }
+    
+
     updateTrail() {
+        // Roketin izini güncelle
         this.trail.positions.push(this.mesh.position.clone());
-        if (this.trail.positions.length > 50) {
-            this.trail.positions.shift();
+        if (this.trail.positions.length > CONSTANTS.MAX_TRAIL_LENGTH) {
+            this.trail.positions.shift(); // Eski izleri kaldır
         }
         this.trail.line.geometry.setFromPoints(this.trail.positions);
     }

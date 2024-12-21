@@ -4,9 +4,14 @@ class InfoPanel {
         this.statsElement = document.getElementById('stats');
     }
 
-    update(currentTargetIndex) {
+    update(currentTargetIndex, rocketFuel, satellites) {
         this.infoElement.innerHTML = `Uzay Simülasyonu`;
-        this.statsElement.innerHTML = 
-            `Ziyaret Edilen Uydu: ${currentTargetIndex}/${CONSTANTS.NUM_SATELLITES}`;
+        this.statsElement.innerHTML = `
+            <strong>Roket Yakıt:</strong> ${rocketFuel.toFixed(1)}<br>
+            <strong>Uydu Yakıt Durumu:</strong><br>
+            ${satellites.map((sat, i) => 
+                `Uydu ${i + 1}: ${sat.fuel.toFixed(1)}`
+            ).join('<br>')}
+        `;
     }
 }

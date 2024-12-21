@@ -40,14 +40,19 @@ class SpaceSimulation {
             requestAnimationFrame(this.animate.bind(this));
     
             this.earth.rotate();
-            this.moon.updatePosition(); // Ay'ın pozisyon ve dönüş güncellemesi
+            this.moon.updatePosition(); // Ay güncellemesi
             this.satellites.forEach(satellite => satellite.update());
-            this.rocket.update(this.satellites);
-            this.infoPanel.update(this.rocket.currentTargetIndex);
+            this.rocket.update(this.satellites); // Roket hareketi ve yakıt yönetimi
+            this.infoPanel.update(
+                this.rocket.currentTargetIndex,
+                this.rocket.fuel,
+                this.satellites
+            );
     
             this.sceneManager.render();
         } catch (error) {
             console.error('Animate hatası:', error);
         }
     }
+    
 }
