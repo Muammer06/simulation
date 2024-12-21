@@ -12,4 +12,5 @@ const CONSTANTS = {
     FUEL_CONSUMPTION_RATE: 0.1, // Birim mesafe başına yakıt tüketimi
     FUEL_TRANSFER_RATE: 20, // Uyduya yakıt transfer oranı
     SATELLITE_FUEL_CONSUMPTION_RATE: 0.05, // Uyduların hareket başına yakıt tüketimi
+    
 };
