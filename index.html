@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uzay Simülasyonu</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="info">Uzay Simülasyonu</div>
+    <div id="stats"></div>
+
+    <!-- Three.js kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Debug için konsol logları ekleyin -->
+    <script>
+        console.log('Three.js yüklendi:', typeof THREE !== 'undefined');
+        console.log('OrbitControls yüklendi:', typeof THREE.OrbitControls !== 'undefined');
+    </script>
+
+    <!-- Uygulama kodları -->
+    <script src="js/constants.js"></script>
+    <script>console.log('Constants yüklendi:', typeof CONSTANTS !== 'undefined');</script>
+    
+    <script src="js/SceneManager.js"></script>
+    <script>console.log('SceneManager yüklendi:', typeof SceneManager !== 'undefined');</script>
+    
+    <script src="js/Earth.js"></script>
+    <script>console.log('Earth yüklendi:', typeof Earth !== 'undefined');</script>
+    
+    <script src="js/Satellite.js"></script>
+    <script>console.log('Satellite yüklendi:', typeof Satellite !== 'undefined');</script>
+    
+    <script src="js/Moon.js"></script> 
+    <script>console.log('Moon yüklendi:', typeof Moon !== 'undefined');</script>
+
+    <script src="js/RocketMotion.js"></script>
+    <script>console.log('RocketMotion yüklendi:', typeof RocketMotion !== 'undefined');</script>
+    <script src="js/Rocket.js"></script>
+    <script>console.log('Rocket yüklendi:', typeof Rocket !== 'undefined');</script>
+    
+    <script src="js/InfoPanel.js"></script>
+    <script>console.log('InfoPanel yüklendi:', typeof InfoPanel !== 'undefined');</script>
+    
+    <script src="js/main.js"></script>
+    <script>console.log('Main yüklendi');</script>
+
+    <!-- Test kodu ekleyin -->
+    <script>
+        window.addEventListener('load', () => {
+            try {
+                console.log('Simülasyon başlatılıyor...');
+                const simulation = new SpaceSimulation();
+                console.log('Simülasyon başlatıldı');
+            } catch (error) {
+                console.error('Simülasyon başlatılırken hata oluştu:', error);
+            }
+        });
+    </script>
+</body>
+</html>
