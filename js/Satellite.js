@@ -3,6 +3,9 @@ class Satellite {
         this.createSatellite(index);
         this.createTrail();
         this.fuel = 100; // Başlangıç yakıt seviyesi
+        this.age = 0; // Yaş (simülasyon zamanı ile artacak)
+        this.lifetime = Math.floor(Math.random() * (CONSTANTS.SATELLITE_LIFETIME_MAX - CONSTANTS.SATELLITE_LIFETIME_MIN + 1)) + CONSTANTS.SATELLITE_LIFETIME_MIN;
+
     }
 
     createSatellite(index) {
@@ -12,7 +15,7 @@ class Satellite {
             shininess: 30
         });
         this.mesh = new THREE.Mesh(geometry, material);
-        
+
         this.mesh.userData = {
             inclination: Math.random() * Math.PI,
             ascendingNode: (2 * Math.PI * index) / CONSTANTS.NUM_SATELLITES,
@@ -33,42 +36,39 @@ class Satellite {
         };
     }
 
-    update() {
-        if (this.fuel > 0) {
-            const userData = this.mesh.userData;
-            userData.angle += 0.001 * CONSTANTS.SIMULATION_SPEED;
-            
-            const position = this.calculatePosition(userData);
-            this.mesh.position.copy(position);
-            
-            this.updateTrail(position);
-            this.consumeFuel();
-        }
-    }
-
-    consumeFuel() {
-        this.fuel -= CONSTANTS.SATELLITE_FUEL_CONSUMPTION_RATE;
-        if (this.fuel < 0) this.fuel = 0;
+    update(deltaTime) {
+        this.age += deltaTime / CONSTANTS.SECONDS_IN_A_DAY; // Zamanı gün cinsine çevir
+    
+        const userData = this.mesh.userData;
+        userData.angle += (2 * Math.PI / CONSTANTS.SATELLITE_ORBIT_PERIOD) * deltaTime;
+    
+        const position = this.calculatePosition(userData);
+        this.mesh.position.copy(position);
+    
+        this.updateTrail(position);
+        this.consumeFuel();
     }
     
+    getRemainingLifetime() {
+        return Math.max(this.lifetime - this.age / 365, 0).toFixed(2); // Yıllık kalan süre
+    }
+    
+
     calculatePosition(userData) {
-        // Kepler yörünge elemanlarını kullan
         const x = CONSTANTS.GEO_ORBIT_RADIUS * (
             Math.cos(userData.ascendingNode) * Math.cos(userData.angle) -
-            Math.sin(userData.ascendingNode) * Math.sin(userData.angle) * 
-            Math.cos(userData.inclination)
+            Math.sin(userData.ascendingNode) * Math.sin(userData.angle) * Math.cos(userData.inclination)
         );
-        
+
         const y = CONSTANTS.GEO_ORBIT_RADIUS * (
             Math.sin(userData.ascendingNode) * Math.cos(userData.angle) +
-            Math.cos(userData.ascendingNode) * Math.sin(userData.angle) * 
-            Math.cos(userData.inclination)
+            Math.cos(userData.ascendingNode) * Math.sin(userData.angle) * Math.cos(userData.inclination)
         );
-        
+
         const z = CONSTANTS.GEO_ORBIT_RADIUS * (
             Math.sin(userData.angle) * Math.sin(userData.inclination)
         );
-    
+
         return new THREE.Vector3(x, y, z);
     }
 
@@ -79,4 +79,11 @@ class Satellite {
         }
         this.trail.line.geometry.setFromPoints(this.trail.positions);
     }
+
+ consumeFuel() {
+        this.fuel -= CONSTANTS.SATELLITE_FUEL_CONSUMPTION_RATE;
+        if (this.fuel < 0) this.fuel = 0;
+    }
+
+
 }

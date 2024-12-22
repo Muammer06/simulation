@@ -10,66 +10,80 @@ class RocketMotion {
 
     // Yeni bir yol planla
     planPath(rocket, targetSatellite) {
+        if (!rocket || !targetSatellite || !targetSatellite.mesh) {
+            console.warn('Rota planlama başarısız: Roket veya hedef uydu geçersiz.');
+            return;
+        }
+    
         const startPos = rocket.getPosition();
         const targetPos = targetSatellite.mesh.position;
-
+    
+        const earthCenter = new THREE.Vector3(0, 0, 0);
+        const orbitHeight = CONSTANTS.GEO_ORBIT_RADIUS * 1.1;
+    
+        const startDirection = startPos.clone().sub(earthCenter).normalize();
+        const targetDirection = targetPos.clone().sub(earthCenter).normalize();
+    
+        const midPoint = new THREE.Vector3().addVectors(
+            startDirection.multiplyScalar(orbitHeight),
+            targetDirection.multiplyScalar(orbitHeight)
+        ).multiplyScalar(0.5);
+    
         this.currentPath = {
             start: startPos.clone(),
-            current: startPos.clone(),
-            target: targetPos.clone(),
-            startTime: Date.now(),
-            phase: 'transfer' // transfer veya approach
-        };
-
-        this.targetSatellite = targetSatellite;
-        this.progress = 0;
-
-        // Yörünge parametrelerini hesapla
-        const distance = startPos.distanceTo(targetPos);
-        const midPoint = new THREE.Vector3().addVectors(startPos, targetPos).multiplyScalar(0.5);
-        const heightOffset = distance * 0.2; // Yörünge yüksekliği
-
-        this.orbitParams = {
             midPoint: midPoint,
-            heightOffset: heightOffset,
-            distance: distance
+            target: targetPos.clone(),
+            phase: 'transfer'
         };
+    
+        this.progress = 0;
     }
-
-    // Roketi hareket ettir
-    updatePosition(rocket) {
-        if (!this.currentPath) return false;
-
-        const currentTime = Date.now();
-        const elapsedTime = (currentTime - this.currentPath.startTime) / 1000;
-
-        // Hedef uydunun güncel pozisyonunu al
-        const currentTargetPos = this.targetSatellite.mesh.position.clone();
-        this.currentPath.target.copy(currentTargetPos);
-
-        // İlerlemeyi güncelle
-        this.progress += this.speed;
-        
-        if (this.progress >= 1) {
-            return true; // Hareket tamamlandı
+    
+    updatePosition(rocket, deltaTime) {
+        if (!this.currentPath || !this.currentPath.start || !this.currentPath.midPoint || !this.currentPath.target) {
+            console.warn('Geçersiz rota parametreleri, hareket durduruldu.');
+            this.currentPath = null;
+            return false;
         }
-
-        // Yörünge hareketi hesapla
-        const newPosition = this.calculateOrbitPosition(
-            this.currentPath.start,
-            currentTargetPos,
-            this.progress
-        );
-
-        // Pozisyonu güncelle
-        rocket.mesh.position.copy(newPosition);
-        this.currentPath.current.copy(newPosition);
-
-        // Roketi yönlendir
-        this.updateRocketOrientation(rocket, currentTargetPos);
-
-        return false; // Hareket devam ediyor
+    
+        // Hız faktörünü deltaTime ile sınırla
+        const step = CONSTANTS.ROCKET_SPEED * deltaTime;
+        const totalDistance = this.currentPath.start.distanceTo(this.currentPath.target);
+        this.progress += step / totalDistance;
+    
+        // İlerleme sınırlandırılması
+        if (this.progress > 1) {
+            this.progress = 1;
+        }
+    
+        if (this.progress < 0.5) {
+            // İlk etap: Başlangıçtan ara noktaya
+            rocket.mesh.position.lerpVectors(
+                this.currentPath.start,
+                this.currentPath.midPoint,
+                this.progress * 2
+            );
+        } else if (this.progress <= 1) {
+            // İkinci etap: Ara noktadan hedefe
+            rocket.mesh.position.lerpVectors(
+                this.currentPath.midPoint,
+                this.currentPath.target,
+                (this.progress - 0.5) * 2
+            );
+        }
+    
+        // Hedefe ulaşıldı
+        if (this.progress >= 1) {
+            rocket.mesh.position.copy(this.currentPath.target);
+            this.currentPath = null;
+            this.progress = 0;
+            return true;
+        }
+    
+        return false;
     }
+    
+    
 
     calculateOrbitPosition(start, end, progress) {
         // Bezier eğrisi kullanarak yörünge hesapla

@@ -1,32 +1,41 @@
 class Moon {
     constructor() {
-        const geometry = new THREE.SphereGeometry(CONSTANTS.MOON_RADIUS * 5.5, 64, 64); // Moon geometry
-
-        const textureLoader = new THREE.TextureLoader();
-        const moonTexture = textureLoader.load('textures/moon_texture.png'); // Load the moon texture
-
+        const geometry = new THREE.SphereGeometry(CONSTANTS.MOON_RADIUS*4, 128, 128);
         const material = new THREE.MeshPhongMaterial({
-            map: moonTexture, // Apply the texture to the moon
-            shininess: 100, // Reduce shininess for a matte look
+            map: new THREE.TextureLoader().load('textures/moon_texture.png'),
+            shininess: 500,
         });
 
         this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.set(CONSTANTS.MOON_ORBIT_RADIUS, 0, 0);
 
-        // Moon orbit and rotation setup
-        this.angle = 0; // Initial orbit angle
-        this.rotationSpeed = 0.001; // Rotation speed
-        this.orbitSpeed = 0.0005; // Orbit speed
-
-        this.updatePosition();
+        this.rotationSpeed = (2 * Math.PI) / (CONSTANTS.MOON_ROTATION_PERIOD * 24 * 60 * 60); // Gerçekçi dönüş hızı
     }
 
-    updatePosition() {
+    update(deltaTime) {
+        // Ay, 27 günde bir tur tamamlamalı
         this.angle += this.orbitSpeed; // Update orbit position
         const x = CONSTANTS.MOON_ORBIT_RADIUS * Math.cos(this.angle);
         const z = CONSTANTS.MOON_ORBIT_RADIUS * Math.sin(this.angle);
         this.mesh.position.set(x, 0, z);
-
-        // Rotate the moon
-        this.mesh.rotation.y += this.rotationSpeed;
+        this.mesh.rotation.y += (2 * Math.PI / CONSTANTS.MOON_ROTATION_PERIOD) * deltaTime;
     }
+    
+
+    getLaunchPosition() {
+        return new THREE.Vector3(
+            CONSTANTS.MOON_RADIUS * 0.8,
+            0,
+            CONSTANTS.MOON_RADIUS * 0.5
+        );
+    }
+ 
+
+    reset() {
+        // Ay başlangıç pozisyonuna döner
+        this.mesh.position.set(CONSTANTS.MOON_ORBIT_RADIUS, 0, 0);
+        this.angle = 0;
+        console.log('Ay sıfırlandı ve başlangıç pozisyonuna döndü.');
+    }
+    
 }

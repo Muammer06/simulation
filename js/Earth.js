@@ -18,7 +18,10 @@ class Earth {
         this.mesh = new THREE.Mesh(geometry, material);
     }
 
-    rotate() {
-        this.mesh.rotation.y += 0.001 * CONSTANTS.SIMULATION_SPEED; // Dünya dönüş hızı
+    rotate(deltaTime) {
+        // Dünya'nın 24 saatte bir tur atması sağlanır
+        this.mesh.rotation.y += (2 * Math.PI / CONSTANTS.EARTH_ROTATION_PERIOD) * deltaTime;
     }
+    
+    
 }
