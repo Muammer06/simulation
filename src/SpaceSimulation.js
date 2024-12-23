@@ -25,37 +25,28 @@ export class SpaceSimulation {
         this.simulationInterval = null;
     }
 
-    /**
-     * 🌍 Sahneyi başlatır ve Dünya, Ay, Uydu ve Roketleri oluşturur.
-     */
     initializeScene() {
-        console.log('%c🌍 Dünya, Ay ve Uydular Simüle Ediliyor...', 'color: cyan; font-weight: bold;');
-
         this.sceneManager.createEarth();
         this.sceneManager.createMoon();
-
-        // Uyduları oluştur
-        const satelliteCount = parseInt(document.getElementById('satelliteCount')?.value) || 10;
-        this.satellites = [];
+    
+        const satelliteCount = parseInt(document.getElementById('satelliteCount').value) || 10;
         for (let i = 0; i < satelliteCount; i++) {
             const satellite = new Satellite(i);
             this.satellites.push(satellite);
             this.sceneManager.addSatellite(satellite);
         }
-        console.log(`🛰️ ${satelliteCount} uydu oluşturuldu.`);
-
-        // Roketleri oluştur
-        const rocketCount = parseInt(document.getElementById('rocketCount')?.value) || 5;
-        this.rockets = [];
+    
+        const rocketCount = parseInt(document.getElementById('rocketCount').value) || 5;
         for (let i = 0; i < rocketCount; i++) {
             const rocket = new Rocket(i, CONSTANTS.MAX_FUEL);
             this.rockets.push(rocket);
             this.sceneManager.addRocket(rocket);
         }
-        console.log(`🚀 ${rocketCount} roket oluşturuldu.`);
-
+    
         this.sceneManager.render();
     }
+    
+    
 
     /**
      * 🔄 Simülasyonu her karede günceller.
@@ -69,6 +60,16 @@ export class SpaceSimulation {
         this.rockets.forEach(rocket => rocket.update(CONSTANTS.SIMULATION_TIME_STEP));
 
         this.infoPanel.update(this.simulationTime, this.satellites, this.rockets);
+
+        this.rockets.forEach((rocket) => {
+            rocket.update(CONSTANTS.SIMULATION_TIME_STEP);
+            if (!rocket.alive) {
+                console.warn(`❌ Roket ${rocket.index}: Devre dışı, yakıt tamamen bitti.`);
+            }
+        });
+    
+        this.satellites.forEach(satellite => satellite.update(CONSTANTS.SIMULATION_TIME_STEP));
+    
         this.sceneManager.render();
     }
 
@@ -173,25 +174,18 @@ export class SpaceSimulation {
     }
 
     async optimizeRouteWithTabuSearch() {
-        console.log('%c🧠 TABU Search Algoritması Çalıştırılıyor...', 'color: cyan; font-weight: bold;');
+        console.log('%c🚀 TABU Search Optimizasyonu Başlatılıyor...', 'color: blue; font-weight: bold;');
+        this.sceneManager.clearPaths(); // Eski yolları temizle
     
-        if (!this.tabuSearch) {
-            this.tabuSearch = new TabuSearch(this.satellites, this.rockets, CONSTANTS.TABU_ITERATIONS);
-        }
-    
+        this.tabuSearch = new TabuSearch(this.satellites, this.rockets);
         const optimizedResult = await this.tabuSearch.optimize();
     
         this.optimizedRoute = optimizedResult.route;
         this.totalCost = optimizedResult.cost;
     
-        console.log(
-            `%c✅ Optimum Rota: ${this.optimizedRoute.map(node => node.name).join(' → ')}`,
-            'color: green; font-weight: bold;'
-        );
+        console.log(`✅ Nihai Rota: ${this.optimizedRoute.map(node => node.name).join(' → ')}`);
         console.log(`💰 Toplam Maliyet: ${this.totalCost.toFixed(2)}`);
-    
-        this.infoPanel.updateRoute(this.optimizedRoute);
-        this.infoPanel.updateCost(this.totalCost);
     }
+    
     
 }

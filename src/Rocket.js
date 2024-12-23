@@ -70,18 +70,36 @@ class Rocket {
      * @param {number} deltaTime - Zaman aralığı
      */
     update(deltaTime) {
+        if (this.checkFuelForReturn()) return;
+    
         if (!this.alive || !this.motion.currentPath) return;
-
+    
         const completed = this.motion.updatePosition(this, deltaTime);
         this.consumeFuel(deltaTime);
-
+    
         if (completed) {
             console.log(`🏁 Roket ${this.index}: ${this.currentTarget?.name} hedefine ulaştı.`);
             this.motion.reset();
         }
-
+    
         this.updateTrail();
+        this.updateInfo();
     }
+    
+    /**
+     * 📊 Anlık Bilgi Güncelle
+     */
+    updateInfo() {
+        const infoPanel = document.getElementById('route');
+        if (infoPanel) {
+            infoPanel.innerHTML = `
+                <h4>Roket ${this.index}:</h4>
+                🚀 Konum: (${this.mesh.position.x.toFixed(2)}, ${this.mesh.position.y.toFixed(2)}, ${this.mesh.position.z.toFixed(2)})
+                <br>⛽ Yakıt: ${this.fuel.toFixed(2)} L
+            `;
+        }
+    }
+    
 
     /**
      * ⛽ Yakıt tüketimini işler.
@@ -103,24 +121,7 @@ class Rocket {
         );
     }
 
-    /**
-     * 🌑 Ay'a dönüş için gerekli yakıtı hesaplar.
-     * @returns {number} Ay'a dönüş için gerekli yakıt miktarı.
-     */
-    calculateRequiredFuelToMoon() {
-        const distanceToMoon = CONSTANTS.MOON_ORBIT_RADIUS;
-        return distanceToMoon * CONSTANTS.FUEL_CONSUMPTION_RATE;
-    }
 
-    /**
-     * 🌑 Ay'a dönüşü başlatır.
-     */
-    returnToMoon() {
-        this.motion.planPath(this, {
-            mesh: { position: new THREE.Vector3(CONSTANTS.MOON_ORBIT_RADIUS, 0, 0) },
-        });
-        this.currentTarget = null;
-    }
 
     /**
      * 📍 Roket izini günceller.
@@ -145,6 +146,43 @@ class Rocket {
 
         console.log(`🔄 Roket ${this.index} sıfırlandı ve başlangıç konumuna döndü.`);
     }
+    
+
+
+    consumeFuel(deltaTime) {
+        const fuelToConsume = CONSTANTS.FUEL_CONSUMPTION_RATE * deltaTime;
+    
+        if (this.fuel <= fuelToConsume) {
+            this.fuel = 0;
+            this.alive = false;
+            console.warn(`❌ Roket ${this.index}: Yakıt tamamen bitti.`);
+            return;
+        }
+    
+        this.fuel -= fuelToConsume;
+        console.log(`⛽ Roket ${this.index}: Yakıt Tüketildi: ${fuelToConsume.toFixed(2)} L, Kalan Yakıt: ${this.fuel.toFixed(2)} L`);
+    }
+    
+    calculateRequiredFuelToMoon() {
+        // Ay'a dönüş mesafesi ve yakıt tüketimi hesaplaması
+        const distanceToMoon = CONSTANTS.MOON_ORBIT_RADIUS;
+        return distanceToMoon * CONSTANTS.FUEL_CONSUMPTION_RATE;
+    }
+    
+    returnToMoon() {
+        if (this.currentTarget?.name === 'Moon') {
+            console.log(`🌑 Roket ${this.index}: Zaten Ay'a dönüyor.`);
+            return;
+        }
+    
+        this.motion.planPath(this, {
+            mesh: { position: new THREE.Vector3(0, 0, CONSTANTS.MOON_ORBIT_RADIUS) },
+        });
+        this.currentTarget = { name: 'Moon' };
+        console.log(`🚀 Roket ${this.index}: Ay'a dönüş başlatıldı.`);
+    }
+
+
 }
 
 export default Rocket;

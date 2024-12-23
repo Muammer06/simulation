@@ -15,19 +15,15 @@ class Satellite {
         console.log(`🛰️ ${this.name}: Oluşturuldu. Ömür: ${this.lifetime.toFixed(2)} yıl`);
     }
 
-    /**
-     * 🌍 Rastgele başlangıç pozisyonu üretir.
-     * @param {number} index - Uydu indeksi
-     * @returns {THREE.Vector3}
-     */
     generateInitialPosition(index) {
         const angle = (2 * Math.PI * index) / CONSTANTS.NUM_SATELLITES;
         const x = CONSTANTS.GEO_ORBIT_RADIUS * Math.cos(angle);
         const z = CONSTANTS.GEO_ORBIT_RADIUS * Math.sin(angle);
-        const y = 0;
-
+        const y = 0; // Sabit y değeri
+    
         return new THREE.Vector3(x, y, z);
     }
+    
 
     /**
      * 🛰️ Uydu modelini oluşturur.

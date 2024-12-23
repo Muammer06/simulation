@@ -1,5 +1,6 @@
 import { CONSTANTS } from './constants.js';
 import Rocket from './Rocket.js';
+import * as THREE from 'three';
 
 class TabuSearch {
     constructor(satellites, rockets, maxIterations = CONSTANTS.TABU_ITERATIONS) {
@@ -150,26 +151,137 @@ class TabuSearch {
         return this.tabuList.some((tabuRoute) => JSON.stringify(tabuRoute) === JSON.stringify(route));
     }
 
-    /**
-     * 📊 Rotayı animasyon ile göster
-     */
     async animateRoutes(routes) {
         for (let i = 0; i < this.rockets.length; i++) {
             const rocket = this.rockets[i];
             const route = routes[i];
-
+    
+            console.log(`🛰️ Roket ${rocket.index}: Rota üzerinde ilerliyor...`);
+    
             for (const target of route) {
+                if (!rocket.alive) {
+                    console.warn(`⚠️ Roket ${rocket.index}: Devre dışı, rota tamamlanamıyor.`);
+                    break;
+                }
+    
                 rocket.motion.planPath(rocket, target);
-
+    
+                // ✅ Anlık Rotayı Görselleştir
+                this.visualizePath(rocket, target);
+    
                 while (!rocket.motion.updatePosition(rocket, CONSTANTS.SIMULATION_TIME_STEP)) {
                     rocket.consumeFuel(CONSTANTS.SIMULATION_TIME_STEP);
-                    await this.sleep(100); // Anlık animasyon için bekle
+                    this.updateInfoPanel(rocket, target);
+                    await this.sleep(100); // Görsel güncelleme için bekleme
                 }
-
-                console.log(`🚀 Roket ${rocket.index}, ${target.name} hedefine ulaştı.`);
+    
+                if (rocket.currentTarget?.name === 'Moon') {
+                    console.log(`🌑 Roket ${rocket.index}: Ay'a başarıyla döndü.`);
+                    rocket.reset();
+                    break;
+                }
+    
+                console.log(`🚀 Roket ${rocket.index}: ${target.name} hedefine ulaştı.`);
             }
         }
     }
+    
+    /**
+     * 🚀 Anlık Rota Görselleştirme
+     * @param {Rocket} rocket - Roket nesnesi
+     * @param {Satellite} target - Hedef uydu
+     */
+    visualizePath(rocket, target) {
+        const pathGeometry = new THREE.BufferGeometry().setFromPoints([
+            rocket.mesh.position,
+            target.mesh.position
+        ]);
+    
+        const pathMaterial = new THREE.LineBasicMaterial({
+            color: 0xff0000, // Kırmızı ile rota vurgulama
+            linewidth: 2,
+        });
+    
+        const pathLine = new THREE.Line(pathGeometry, pathMaterial);
+        this.sceneManager.scene.add(pathLine);
+    
+        console.log(`🛤️ Roket ${rocket.index}: Rota görselleştirildi → ${target.name}`);
+    }
+    
+    /**
+     * 📊 Anlık Bilgi Paneli Güncelle
+     * @param {Rocket} rocket - Roket nesnesi
+     * @param {Satellite} target - Hedef uydu
+     */
+    updateInfoPanel(rocket, target) {
+        const infoPanel = document.getElementById('route');
+        const costPanel = document.getElementById('cost');
+    
+        if (infoPanel) {
+            infoPanel.innerHTML = `
+                <h4>Roket ${rocket.index} Hedefi:</h4>
+                🛰️ ${target.name}
+            `;
+        }
+    
+        if (costPanel) {
+            costPanel.innerHTML = `
+                <h4>Kalan Yakıt:</h4>
+                ⛽ ${rocket.fuel.toFixed(2)} L
+            `;
+        }
+    }
+    
+    
+    
+    /**
+     * 🚀 Anlık Rota Görselleştirme
+     * @param {Rocket} rocket - Roket nesnesi
+     * @param {Satellite} target - Hedef uydu
+     */
+    visualizePath(rocket, target) {
+        const pathGeometry = new THREE.BufferGeometry().setFromPoints([
+            rocket.mesh.position,
+            target.mesh.position
+        ]);
+    
+        const pathMaterial = new THREE.LineBasicMaterial({
+            color: 0xff0000, // Kırmızı ile rota vurgulama
+            linewidth: 2,
+        });
+    
+        const pathLine = new THREE.Line(pathGeometry, pathMaterial);
+        this.sceneManager.scene.add(pathLine);
+    
+        console.log(`🛤️ Roket ${rocket.index}: Rota görselleştirildi → ${target.name}`);
+    }
+    
+    /**
+     * 📊 Anlık Bilgi Paneli Güncelle
+     * @param {Rocket} rocket - Roket nesnesi
+     * @param {Satellite} target - Hedef uydu
+     */
+    updateInfoPanel(rocket, target) {
+        const infoPanel = document.getElementById('route');
+        const costPanel = document.getElementById('cost');
+    
+        if (infoPanel) {
+            infoPanel.innerHTML = `
+                <h4>Roket ${rocket.index} Hedefi:</h4>
+                🛰️ ${target.name}
+            `;
+        }
+    
+        if (costPanel) {
+            costPanel.innerHTML = `
+                <h4>Kalan Yakıt:</h4>
+                ⛽ ${rocket.fuel.toFixed(2)} L
+            `;
+        }
+    }
+    
+    
+    
 
     /**
      * 💤 Bekleme fonksiyonu

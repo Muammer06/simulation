@@ -84,13 +84,25 @@ class SceneManager {
      * @param {Satellite} satellite
      */
     addSatellite(satellite) {
-        if (!satellite?.mesh) {
-            console.error('❌ Geçersiz uydu nesnesi.');
-            return;
-        }
+        if (!satellite.mesh) return;
         this.scene.add(satellite.mesh);
         console.log(`🛰️ Uydu ${satellite.index} sahneye eklendi.`);
     }
+    clearPaths() {
+        const toRemove = [];
+        this.scene.traverse((child) => {
+            if (child.isLine) {
+                toRemove.push(child);
+            }
+        });
+    
+        toRemove.forEach((line) => {
+            this.scene.remove(line);
+        });
+    
+        console.log('🧹 Eski yollar temizlendi.');
+    }
+    
 
     /**
      * 🚀 Roketi sahneye ekler.
