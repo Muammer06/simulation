@@ -1,3 +1,7 @@
+import * as THREE from 'three';
+import { CONSTANTS } from './constants.js';  // <-- Dizininize uygun yol
+
+
 class RocketMotion {
     constructor() {
         this.currentPath = null;
@@ -14,31 +18,25 @@ class RocketMotion {
             console.warn('Roket veya hedef uydu bilgileri eksik.');
             return;
         }
-
-        // Roketin ve hedef uydunun pozisyonlarını al
+    
         const startPos = rocket.mesh.position.clone();
         const targetPos = target.mesh.position.clone();
-
-        // Başlangıç ve hedef arasındaki mesafeyi hesapla
-        const distance = startPos.distanceTo(targetPos);
-
-        // Ara nokta hesapla (yörünge yüksekliğiyle birlikte)
+    
         const midPoint = new THREE.Vector3().addVectors(startPos, targetPos).multiplyScalar(0.5);
-        const orbitHeight = CONSTANTS.GEO_ORBIT_RADIUS * 0.5; // Dünya yörüngesinin yarısı kadar yükseklik
-        midPoint.y += orbitHeight; // Ara noktayı yukarı kaydır
-
-        // Yörünge parametrelerini kaydet
+        const orbitHeight = CONSTANTS.GEO_ORBIT_RADIUS * 0.5;
+        midPoint.y += orbitHeight;
+    
         this.currentPath = {
             start: startPos,
             midPoint: midPoint,
             target: targetPos,
-            distance: distance
+            distance: startPos.distanceTo(targetPos)
         };
-
-        this.progress = 0; // Hareket ilerleme durumu sıfırla
-
-        console.log(`Yörünge planlandı: Start(${startPos.x.toFixed(2)}, ${startPos.y.toFixed(2)}), Target(${targetPos.x.toFixed(2)}, ${targetPos.y.toFixed(2)}), MidPoint(${midPoint.x.toFixed(2)}, ${midPoint.y.toFixed(2)})`);
+    
+        this.progress = 0;
+        console.log('Yörünge başarıyla planlandı.');
     }
+    
 
     /**
      * Roketi hedefe doğru ilerletir.
@@ -108,8 +106,10 @@ class RocketMotion {
     reset() {
         this.currentPath = null;
         this.progress = 0;
-        console.log('Yörünge hareketi sıfırlandı.');
+        console.log('RocketMotion sıfırlandı.');
     }
 }
 
 // RocketMotion sınıfını dışa aktar
+
+export default RocketMotion;    

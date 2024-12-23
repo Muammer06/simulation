@@ -12,6 +12,7 @@ class InfoPanel {
      * @param {Array} satellites - Simülasyondaki tüm uyduların listesi.
      * @param {number} simulationTime - Simülasyonun toplam geçen zamanı (saniye cinsinden).
      */
+    
     update(currentTargetIndex, rocketFuel, satellites, simulationTime) {
         const elapsedDays = Math.floor(simulationTime / CONSTANTS.SECONDS_IN_A_DAY);
         const elapsedHours = Math.floor((simulationTime % CONSTANTS.SECONDS_IN_A_DAY) / 3600);
@@ -29,7 +30,7 @@ class InfoPanel {
             <strong>Yakıt Seviyesi:</strong> ${rocketFuel.toFixed(1)} L<br>
             <h4>Uydu Bilgileri</h4>
             ${satellites.map((sat, i) => {
-                const remainingLifetime = sat.getRemainingLifetime();
+                const remainingLifetime = sat.getRemainingLifetime ? sat.getRemainingLifetime() : 'N/A';
                 return `<strong>Uydu ${i + 1}:</strong> 
                     Yaş: ${sat.age.toFixed(2)} gün, 
                     Kalan Ömür: ${(typeof remainingLifetime === 'number' ? remainingLifetime.toFixed(2) : 'N/A')} yıl, 
@@ -38,26 +39,29 @@ class InfoPanel {
         `;
     }
     
-
-    /**
-     * TABU Search toplam maliyet bilgisini günceller.
-     * @param {number} totalCost - Hesaplanan toplam maliyet.
-     */
-    updateCost(totalCost) {
-        this.costElement.innerHTML = `
-            <h4>Optimizasyon Maliyeti</h4>
-            <strong>Toplam Maliyet:</strong> ${totalCost.toFixed(2)}
-        `;
-    }
-
-    /**
-     * TABU Search tarafından belirlenen rota bilgisini gösterir.
-     * @param {Array} route - Optimize edilmiş rota dizisi.
-     */
     updateRoute(route) {
         this.routeElement.innerHTML = `
             <h4>Optimum Rota</h4>
             ${route.map(node => node.name).join(' → ')}
         `;
     }
+    
+    updateCost(totalCost) {
+        this.costElement.innerHTML = `
+            <h4>Toplam Maliyet</h4>
+            ${totalCost.toFixed(2)}
+        `;
+    }
+    
+    updateObjectiveDetails(activeRockets, totalCost) {
+        this.routeElement.innerHTML = `
+            <h4>Aktif Roketler:</h4>
+            ${activeRockets.map(rocket => rocket.name).join(', ')}
+            <h4>Toplam Maliyet:</h4>
+            ${totalCost.toFixed(2)}
+        `;
+    }
+    
 }
+
+export default InfoPanel;

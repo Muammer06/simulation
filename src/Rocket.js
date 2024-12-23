@@ -1,19 +1,23 @@
+import { CONSTANTS } from './constants.js';  // Sabit değerleri içe aktar
+import * as THREE from 'three';             // Three.js kütüphanesi
+import RocketMotion from './RocketMotion.js'; // Roket hareket yönetimi
 
 class Rocket {
-    constructor() {
-        this.createRocket();
-        this.createTrail();
-        this.currentTargetIndex = 0;
-        this.fuel = CONSTANTS.MAX_FUEL;
-        this.motion = new RocketMotion();
-        this.optimizedRoute = [];
-        this.previousPosition = null;
+    constructor(index) {
+        this.index = index;
+        this.fuel = CONSTANTS.MAX_FUEL;      // Maksimum yakıt seviyesi
+        this.route = [];                    // İzlenen rota
+        this.alive = true;                  // Roketin durumu
+        this.motion = new RocketMotion();   // Roket hareket yöneticisi
+        this.currentTarget = null;          // Şu anki hedef
+        this.previousPosition = null;       // Önceki pozisyon (yakıt hesabı için)
 
-        this.mesh.position.set(CONSTANTS.MOON_ORBIT_RADIUS, 0, 0); // Roket başlangıç konumu Ay
+        this.createRocket();                // Roket modeli oluştur
+        this.createTrail();                 // Roket izi oluştur
     }
 
     /**
-     * Roket modelini oluşturur.
+     * 🚀 Roket modelini oluşturur.
      */
     createRocket() {
         const geometry = new THREE.CylinderGeometry(
@@ -51,7 +55,7 @@ class Rocket {
     }
 
     /**
-     * Roketin izini oluşturur.
+     * 🌟 Roketin izini oluşturur.
      */
     createTrail() {
         const trailGeometry = new THREE.BufferGeometry();
@@ -68,42 +72,45 @@ class Rocket {
     }
 
     /**
-     * Roketi günceller ve hedefe hareket ettirir.
+     * 🎯 Rastgele bir uyduya hareket eder.
+     * @param {Array} satellites - Uydular dizisi.
      */
-    update(satellites, deltaTime) {
-        const requiredFuelToMoon = this.calculateRequiredFuelToMoon();
+    moveToRandomSatellite(satellites) {
+        if (!this.alive) return;
 
-        if (this.fuel <= requiredFuelToMoon) {
-            console.warn('Yakıt kritik seviyede, Ay\'a dönüş başlatılıyor.');
-            this.returnToMoon(deltaTime);
+        const availableSatellites = satellites.filter(sat => !this.route.includes(sat));
+        if (availableSatellites.length === 0) {
+            this.alive = false;
+            console.warn(`Roket ${this.index}: Uygun hedef kalmadı.`);
             return;
         }
 
-        if (this.currentTargetIndex >= satellites.length) {
-            console.log("Tüm uydular ziyaret edildi.");
-            return;
-        }
-
-        const currentTarget = satellites[this.currentTargetIndex];
-
-        if (!this.motion.currentPath) {
-            this.motion.planPath(this, currentTarget);
-        }
-
-        const completed = this.motion.updatePosition(this, deltaTime); // HATA BURADAYDI
-        this.consumeFuel(deltaTime);
-
-        if (completed && currentTarget.fuel < 100) {
-            this.refuelSatellite(currentTarget);
-            this.currentTargetIndex++;
-            this.motion.reset();
-        }
-
-        this.updateTrail();
+        const target = availableSatellites[Math.floor(Math.random() * availableSatellites.length)];
+        this.route.push(target);
+        this.motion.planPath(this, target);
     }
 
     /**
-     * Yakıt tüketimini hesaplar ve uygular.
+     * ⏳ Roketi günceller ve hareketini sağlar.
+     * @param {number} deltaTime - Geçen süre.
+     */
+    update(deltaTime) {
+        if (!this.alive || !this.motion.currentPath) return;
+    
+        const completed = this.motion.updatePosition(this, deltaTime);
+        this.consumeFuel(deltaTime);
+    
+        if (completed) {
+            console.log(`Roket ${this.index}: ${this.currentTarget?.name} hedefine ulaştı.`);
+            this.motion.reset();
+        }
+    
+        this.updateTrail();
+    }
+    
+    /**
+     * ⛽ Yakıt tüketimini hesaplar ve günceller.
+     * @param {number} deltaTime - Geçen süre.
      */
     consumeFuel(deltaTime) {
         const currentPosition = this.mesh.position.clone();
@@ -128,7 +135,8 @@ class Rocket {
     }
 
     /**
-     * Uyduya yakıt aktarır.
+     * 🚀 Uyduya yakıt aktarır.
+     * @param {Object} satellite - Hedef uydu.
      */
     refuelSatellite(satellite) {
         const requiredFuel = 100 - satellite.fuel;
@@ -145,14 +153,8 @@ class Rocket {
         console.log(`Uyduya ${fuelToTransfer.toFixed(2)} L yakıt aktarıldı. Roket kalan yakıt: ${this.fuel.toFixed(2)} L`);
     }
 
-
-    getPosition() {
-        return this.mesh.position.clone();
-    }
-    
-
     /**
-     * Ay'a dönüş için gerekli yakıtı hesaplar.
+     * 🌕 Ay'a dönüş için gerekli yakıtı hesaplar.
      */
     calculateRequiredFuelToMoon() {
         const distanceToMoon = CONSTANTS.MOON_ORBIT_RADIUS;
@@ -160,37 +162,7 @@ class Rocket {
     }
 
     /**
-     * Optimize rota takibini başlatır.
-     */
-    followOptimizedRoute(route) {
-        this.optimizedRoute = route;
-        this.currentTargetIndex = 0;
-    }
-
-    /**
-     * Ay'a dönüşü gerçekleştirir ve yakıt doldurur.
-     */
-    returnToMoon(deltaTime) {
-        if (!this.motion.currentPath) {
-            this.motion.planPath(this, {
-                mesh: { position: new THREE.Vector3(CONSTANTS.MOON_ORBIT_RADIUS, 0, 0) }
-            });
-        }
-
-        const completed = this.motion.updatePosition(this, deltaTime);
-        this.consumeFuel(deltaTime);
-
-        if (completed) {
-            this.fuel = CONSTANTS.MAX_FUEL;
-            this.motion.reset();
-            console.log('Roket Ay\'a ulaştı ve yakıt dolduruldu.');
-        }
-
-        this.updateTrail();
-    }
-
-    /**
-     * Roket izini günceller.
+     * 📍 Roket izini günceller.
      */
     updateTrail() {
         this.trail.positions.push(this.mesh.position.clone());
@@ -201,7 +173,7 @@ class Rocket {
     }
 
     /**
-     * Roketi sıfırlar.
+     * 🔄 Roketi sıfırlar.
      */
     reset() {
         this.mesh.position.set(CONSTANTS.MOON_ORBIT_RADIUS, 0, 0);
@@ -211,3 +183,5 @@ class Rocket {
         console.log('Roket sıfırlandı ve başlangıç konumuna döndü.');
     }
 }
+
+export default Rocket;
