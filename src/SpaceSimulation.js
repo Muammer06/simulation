@@ -1,13 +1,10 @@
-// SpaceSimulation.js
 import * as THREE from 'three';
-import { CONSTANTS } from './constants.js';  // Sabit değerleri içe aktar
-
+import { CONSTANTS } from './constants.js';
 import TabuSearch from './TabuSearch.js';
-
 import SceneManager from './SceneManager.js';
 import InfoPanel from './InfoPanel.js';
 import Earth from './Earth.js';
-import  Moon  from './Moon.js';
+import Moon from './Moon.js';
 import Satellite from './Satellite.js';
 import Rocket from './Rocket.js';
 
@@ -19,128 +16,182 @@ export class SpaceSimulation {
         this.satellites = [];
         this.rockets = [];
         this.infoPanel = new InfoPanel();
+
         this.simulationRunning = false;
-        this.simulationPaused = false;
         this.simulationTime = 0;
         this.optimizedRoute = [];
         this.totalCost = 0;
+        this.tabuSearch = null;
+        this.simulationInterval = null;
     }
 
-    initialize(satelliteCount = 30, rocketCount = 5, maxGenerations = 4, simulationSpeed = 1) {
-        console.log('Simülasyon başlatılıyor...');
-        this.reset();
-        this.setupScene();
-        this.createSatellites(satelliteCount);
-        this.createRockets(rocketCount);
-        CONSTANTS.SIMULATION_SPEED = simulationSpeed;
-        console.log(`Simülasyon ${satelliteCount} uydu ve ${rocketCount} roket ile başlatıldı.`);
-    }
+    /**
+     * 🌍 Sahneyi başlatır ve Dünya, Ay, Uydu ve Roketleri oluşturur.
+     */
+    initializeScene() {
+        console.log('%c🌍 Dünya, Ay ve Uydular Simüle Ediliyor...', 'color: cyan; font-weight: bold;');
 
-    setupScene() {
-        if (!this.sceneManager || !this.sceneManager.add) {
-            console.error('SceneManager başlatılamadı veya add metodu mevcut değil.');
-            return;
-        }
-        this.sceneManager.add(this.earth.mesh);
-        this.sceneManager.add(this.moon.mesh);
-    }
-    
+        this.sceneManager.createEarth();
+        this.sceneManager.createMoon();
 
-    createSatellites(count) {
-        for (let i = 0; i < count; i++) {
+        // Uyduları oluştur
+        const satelliteCount = parseInt(document.getElementById('satelliteCount')?.value) || 10;
+        this.satellites = [];
+        for (let i = 0; i < satelliteCount; i++) {
             const satellite = new Satellite(i);
             this.satellites.push(satellite);
-            this.sceneManager.add(satellite.mesh);
+            this.sceneManager.addSatellite(satellite);
         }
-    }
+        console.log(`🛰️ ${satelliteCount} uydu oluşturuldu.`);
 
-    createRockets(count) {
-        this.rockets = []; // Roket dizisini başlat
-        for (let i = 0; i < count; i++) {
-            const rocket = new Rocket(i);
-            this.rockets.push(rocket);
-            this.sceneManager.add(rocket.mesh);
-        }
-        console.log('Roketler oluşturuldu:', this.rockets);
-    }
-    
-    
-
-    reset() {
-        console.log('Simülasyon sıfırlanıyor...');
-        this.satellites.forEach(sat => this.sceneManager.scene.remove(sat.mesh));
-        this.rockets.forEach(rocket => this.sceneManager.scene.remove(rocket.mesh));
-        this.satellites = [];
+        // Roketleri oluştur
+        const rocketCount = parseInt(document.getElementById('rocketCount')?.value) || 5;
         this.rockets = [];
-        this.simulationTime = 0;
-        this.optimizedRoute = [];
+        for (let i = 0; i < rocketCount; i++) {
+            const rocket = new Rocket(i, CONSTANTS.MAX_FUEL);
+            this.rockets.push(rocket);
+            this.sceneManager.addRocket(rocket);
+        }
+        console.log(`🚀 ${rocketCount} roket oluşturuldu.`);
+
+        this.sceneManager.render();
     }
 
-    animate() {
-        if (!this.simulationRunning) return;
-        requestAnimationFrame(this.animate.bind(this));
-        const deltaTime = CONSTANTS.SIMULATION_SPEED * (1 / 60);
-        this.simulationTime += deltaTime;
-        
-        this.earth.rotate(deltaTime);
-        this.moon.update(deltaTime);
-        this.satellites.forEach(sat => sat.update(deltaTime));
-        this.rockets.forEach(rocket => rocket.update(deltaTime));
-        
+    /**
+     * 🔄 Simülasyonu her karede günceller.
+     */
+    update() {
+        this.simulationTime += CONSTANTS.SIMULATION_TIME_STEP;
+
+        this.earth.rotate(CONSTANTS.SIMULATION_TIME_STEP);
+        this.moon.update(CONSTANTS.SIMULATION_TIME_STEP);
+        this.satellites.forEach(sat => sat.update(CONSTANTS.SIMULATION_TIME_STEP));
+        this.rockets.forEach(rocket => rocket.update(CONSTANTS.SIMULATION_TIME_STEP));
+
         this.infoPanel.update(this.simulationTime, this.satellites, this.rockets);
         this.sceneManager.render();
     }
 
+    /**
+     * 🛠️ Sahneyi sıfırlar.
+     */
+    reset() {
+        console.log('🔄 Simülasyon sıfırlanıyor...');
+        this.stopSimulation();
+        this.sceneManager.reset();
+        this.satellites = [];
+        this.rockets = [];
+        this.simulationTime = 0;
+    }
 
-
-
-
-
-
-    async optimizeRoute() {
-        console.log('Gerçek zamanlı TABU Search başlatılıyor...');
-        if (!this.tabuSearch) {
-            this.tabuSearch = new TabuSearch(this.satellites, this.rockets); // 'this.rockets' bir dizi olmalı
+    /**
+     * 🚀 Simülasyonu başlatır.
+     */
+    startSimulation() {
+        if (this.simulationRunning) {
+            console.warn('⚠️ Simülasyon zaten çalışıyor.');
+            return;
         }
-    
+
+        console.log('%c🚀 Simülasyon Başlatılıyor...', 'color: lime; font-weight: bold;');
+        this.simulationRunning = true;
+
+        this.simulationInterval = setInterval(() => {
+            this.update();
+        }, 100); // 100 ms aralıklarla güncelle
+    }
+
+    /**
+     * 🛑 Simülasyonu durdurur.
+     */
+    stopSimulation() {
+        if (!this.simulationRunning) {
+            console.warn('⚠️ Simülasyon zaten durdurulmuş.');
+            return;
+        }
+
+        console.log('%c🛑 Simülasyon Durduruldu.', 'color: red; font-weight: bold;');
+        clearInterval(this.simulationInterval);
+        this.simulationRunning = false;
+    }
+
+    /**
+     * 🤖 TABU Search algoritmasını çalıştırarak optimum rotayı hesaplar.
+     */
+    async optimizeRoute(iterationCount = CONSTANTS.TABU_ITERATIONS) {
+        console.log('%c🚀 TABU Search Başlatılıyor...', 'color: blue; font-weight: bold;');
+        this.tabuSearch = new TabuSearch(this.satellites, this.rockets, iterationCount);
+
         const optimizedResult = await this.tabuSearch.optimize();
+
         this.optimizedRoute = optimizedResult.route;
         this.totalCost = optimizedResult.cost;
-    
+
+        console.log(
+            `%c✅ Optimum Rota: ${this.optimizedRoute.map(node => node.name).join(' → ')}`,
+            'color: green; font-weight: bold;'
+        );
+        console.log(`💰 Toplam Maliyet: ${this.totalCost.toFixed(2)}`);
+
+        this.rockets.forEach((rocket, index) => {
+            rocket.followOptimizedRoute(this.optimizedRoute[index]);
+        });
+
         this.infoPanel.updateRoute(this.optimizedRoute);
         this.infoPanel.updateCost(this.totalCost);
-    
-        console.log(
-            'Optimum Rota:',
-            this.optimizedRoute.map((node) => node.name).join(' → ')
-        );
+        console.log('%c✅ Tüm Roketler için Optimizasyon Tamamlandı!', 'color: green; font-weight: bold;');
     }
-    
-    
+
+    /**
+     * 🎥 Belirli bir rotayı animasyonla gösterir.
+     * @param {Array} route - Optimize edilmiş rota
+     */
     async animateRoute(route) {
-        for (let i = 0; i < route.length; i++) {
-            const currentTarget = route[i];
-    
-            // Roketi hedef uyduya hareket ettir
-            this.rockets[0].motion.planPath(this.rockets[0], currentTarget);
-            while (!this.rockets[0].motion.updatePosition(this.rockets[0], CONSTANTS.SIMULATION_TIME_STEP)) {
-                this.rockets[0].consumeFuel(CONSTANTS.SIMULATION_TIME_STEP);
-                this.sceneManager.render();
-                await this.sleep(100); // Görsel güncelleme için kısa bekleme süresi
+        for (const currentTarget of route) {
+            for (const rocket of this.rockets) {
+                rocket.motion.planPath(rocket, currentTarget);
+
+                while (!rocket.motion.updatePosition(rocket, CONSTANTS.SIMULATION_TIME_STEP)) {
+                    rocket.consumeFuel(CONSTANTS.SIMULATION_TIME_STEP);
+                    this.sceneManager.render();
+                    await this.sleep(100); // Kısa gecikme
+                }
+
+                console.log(`🚀 Roket ${rocket.index}, ${currentTarget.name} hedefine ulaştı.`);
             }
-    
-            console.log(`Roket ${this.rockets[0].index}, ${currentTarget.name} hedefine ulaştı.`);
         }
-    
-        console.log('Rota animasyonu tamamlandı.');
+        console.log('🎬 Rota animasyonu tamamlandı.');
     }
-    
-    // Yardımcı bir uyku fonksiyonu ekleyelim
+
+    /**
+     * 💤 Belirli bir süre bekler.
+     * @param {number} ms - Milisaniye cinsinden süre
+     * @returns {Promise}
+     */
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+
+    async optimizeRouteWithTabuSearch() {
+        console.log('%c🧠 TABU Search Algoritması Çalıştırılıyor...', 'color: cyan; font-weight: bold;');
     
-
-
+        if (!this.tabuSearch) {
+            this.tabuSearch = new TabuSearch(this.satellites, this.rockets, CONSTANTS.TABU_ITERATIONS);
+        }
+    
+        const optimizedResult = await this.tabuSearch.optimize();
+    
+        this.optimizedRoute = optimizedResult.route;
+        this.totalCost = optimizedResult.cost;
+    
+        console.log(
+            `%c✅ Optimum Rota: ${this.optimizedRoute.map(node => node.name).join(' → ')}`,
+            'color: green; font-weight: bold;'
+        );
+        console.log(`💰 Toplam Maliyet: ${this.totalCost.toFixed(2)}`);
+    
+        this.infoPanel.updateRoute(this.optimizedRoute);
+        this.infoPanel.updateCost(this.totalCost);
+    }
+    
 }
-//export default SpaceSimulation;

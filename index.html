@@ -4,16 +4,132 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Uzay Simülasyonu</title>
+    <style>
+      /* Genel Stil Ayarları */
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+      }
+
+      /* Simülasyon Sahnesi */
+      #canvas-container {
+        position: absolute;
+        top: 50px;
+        left: 0;
+        width: 100%;
+        height: calc(100% - 50px);
+        background-color: black;
+        z-index: 0;
+      }
+
+      /* Üst Menü */
+      #top-menu {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 50px;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      /* Kontrol Paneli */
+      #controls {
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        width: 320px;
+        height: calc(100% - 70px);
+        background: rgba(255, 255, 255, 0.95);
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        z-index: 5;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      #controls h3 {
+        margin: 5px 0;
+        text-align: center;
+      }
+
+      #controls h4 {
+        margin: 10px 0 5px;
+      }
+
+      #controls label {
+        margin-top: 5px;
+        font-weight: bold;
+      }
+
+      #controls input,
+      #controls button {
+        margin-top: 5px;
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      #controls button {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+      }
+
+      #controls button:hover {
+        background-color: #388e3c;
+      }
+
+      /* Kaydırma Çubuğu */
+      #controls::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #controls::-webkit-scrollbar-thumb {
+        background-color: #888;
+        border-radius: 4px;
+      }
+
+      #controls::-webkit-scrollbar-thumb:hover {
+        background-color: #555;
+      }
+    </style>
   </head>
   <body>
+    <!-- Üst Menü -->
+    <div id="top-menu">🚀 Uzay Simülasyonu Kontrol Paneli 🛰️</div>
+
+    <!-- Simülasyon Sahnesi -->
     <div id="canvas-container"></div>
+
+    <!-- Kontrol Paneli -->
     <div id="controls">
-      <h3>Uzay Simülasyonu Kontrol Paneli</h3>
+      <h3>Uzay Simülasyonu Ayarları</h3>
+
+      <h4>Genel Ayarlar</h4>
       <label for="satelliteCount">Uydu Sayısı:</label>
       <input type="number" id="satelliteCount" value="30" min="1" max="100" />
 
-      <label for="initialRocketCount">Başlangıç Roket Sayısı:</label>
-      <input type="number" id="initialRocketCount" value="5" min="1" max="10" />
+      <label for="rocketCount">Roket Sayısı:</label>
+      <input type="number" id="rocketCount" value="5" min="1" step="1" />
 
       <label for="maxGenerations">Maksimum Nesil:</label>
       <input type="number" id="maxGenerations" value="4" min="1" max="10" />
@@ -28,18 +144,21 @@
         step="1"
       />
 
-      <h4>Simülasyon Kontrolleri</h4>
+      <h4>Simülasyon Parametreleri</h4>
+      <label for="iterationCount">İterasyon Sayısı:</label>
+      <input type="number" id="iterationCount" value="10" min="1" />
+
+      <label for="fuelAmount">Başlangıç Yakıt Miktarı:</label>
+      <input type="number" id="fuelAmount" value="1000" min="100" step="100" />
+
+      <h4>Kontroller</h4>
       <button id="simulateAndOptimize">Simülasyonu Başlat ve Rota Hesapla</button>
       <button id="startSimulation">Simülasyonu Çalıştır</button>
       <button id="stopSimulation">Simülasyonu Durdur</button>
       <button id="resetSimulation">Simülasyonu Sıfırla</button>
     </div>
-    <div id="route"></div>
-    <div id="cost"></div>
 
-    
-
-    <!-- Tüm JS importlarını tek bir giriş (main.js) üzerinden yapıyoruz. -->
+    <!-- JavaScript Ana Girişi -->
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

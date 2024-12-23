@@ -1,19 +1,19 @@
-import { CONSTANTS } from './constants.js';  // Sabit değerleri içe aktar
-import * as THREE from 'three';             // Three.js kütüphanesi
+import { CONSTANTS } from './constants.js'; // Sabit değerleri içe aktar
+import * as THREE from 'three'; // Three.js kütüphanesi
 import RocketMotion from './RocketMotion.js'; // Roket hareket yönetimi
 
 class Rocket {
-    constructor(index) {
+    constructor(index, initialFuel = CONSTANTS.MAX_FUEL) {
         this.index = index;
-        this.fuel = CONSTANTS.MAX_FUEL;      // Maksimum yakıt seviyesi
-        this.route = [];                    // İzlenen rota
-        this.alive = true;                  // Roketin durumu
-        this.motion = new RocketMotion();   // Roket hareket yöneticisi
-        this.currentTarget = null;          // Şu anki hedef
-        this.previousPosition = null;       // Önceki pozisyon (yakıt hesabı için)
+        this.fuel = initialFuel; // Başlangıç yakıt miktarı
+        this.alive = true;
+        this.motion = new RocketMotion(); // Roket hareketleri için nesne
+        this.currentTarget = null; // Mevcut hedef
 
-        this.createRocket();                // Roket modeli oluştur
-        this.createTrail();                 // Roket izi oluştur
+        this.createRocket(); // Roket modeli oluştur
+        this.createTrail(); // İz oluştur
+
+        console.log(`🚀 Roket ${this.index}: Başlangıç yakıtı ${this.fuel} L`);
     }
 
     /**
@@ -27,31 +27,12 @@ class Rocket {
             32
         );
 
-        const textureLoader = new THREE.TextureLoader();
-        const rocketTexture = textureLoader.load('textures/rocket/rocket_texture.jpg');
-
         const material = new THREE.MeshPhongMaterial({
-            map: rocketTexture,
+            color: 0xff0000,
             shininess: 50,
-            emissive: 0x111111
         });
 
         this.mesh = new THREE.Mesh(geometry, material);
-
-        const coneGeometry = new THREE.ConeGeometry(
-            CONSTANTS.EARTH_RADIUS * 0.04,
-            CONSTANTS.EARTH_RADIUS * 0.1,
-            32
-        );
-
-        const coneMaterial = new THREE.MeshPhongMaterial({
-            color: 0xff0000,
-            shininess: 50
-        });
-
-        const cone = new THREE.Mesh(coneGeometry, coneMaterial);
-        cone.position.set(0, CONSTANTS.EARTH_RADIUS * 0.05, 0);
-        this.mesh.add(cone);
     }
 
     /**
@@ -62,103 +43,83 @@ class Rocket {
         const trailMaterial = new THREE.LineBasicMaterial({
             color: 0x00ff00,
             opacity: 0.5,
-            transparent: true
+            transparent: true,
         });
 
         this.trail = {
             line: new THREE.Line(trailGeometry, trailMaterial),
-            positions: []
+            positions: [],
         };
     }
 
     /**
-     * 🎯 Rastgele bir uyduya hareket eder.
-     * @param {Array} satellites - Uydular dizisi.
+     * 🎯 Belirli bir uyduya hareket eder.
+     * @param {Object} target - Hedef uydu nesnesi
      */
-    moveToRandomSatellite(satellites) {
-        if (!this.alive) return;
+    moveToSatellite(target) {
+        if (!this.alive || !target) return;
 
-        const availableSatellites = satellites.filter(sat => !this.route.includes(sat));
-        if (availableSatellites.length === 0) {
-            this.alive = false;
-            console.warn(`Roket ${this.index}: Uygun hedef kalmadı.`);
-            return;
-        }
-
-        const target = availableSatellites[Math.floor(Math.random() * availableSatellites.length)];
-        this.route.push(target);
+        this.currentTarget = target;
         this.motion.planPath(this, target);
+
+        console.log(`🚀 Roket ${this.index}: ${this.currentTarget.name} hedefine hareket ediyor.`);
     }
 
     /**
-     * ⏳ Roketi günceller ve hareketini sağlar.
-     * @param {number} deltaTime - Geçen süre.
+     * 🔄 Roketin güncelleme döngüsü.
+     * @param {number} deltaTime - Zaman aralığı
      */
     update(deltaTime) {
         if (!this.alive || !this.motion.currentPath) return;
-    
+
         const completed = this.motion.updatePosition(this, deltaTime);
         this.consumeFuel(deltaTime);
-    
+
         if (completed) {
-            console.log(`Roket ${this.index}: ${this.currentTarget?.name} hedefine ulaştı.`);
+            console.log(`🏁 Roket ${this.index}: ${this.currentTarget?.name} hedefine ulaştı.`);
             this.motion.reset();
         }
-    
+
         this.updateTrail();
     }
-    
+
     /**
-     * ⛽ Yakıt tüketimini hesaplar ve günceller.
-     * @param {number} deltaTime - Geçen süre.
+     * ⛽ Yakıt tüketimini işler.
+     * @param {number} deltaTime - Zaman aralığı
      */
     consumeFuel(deltaTime) {
-        const currentPosition = this.mesh.position.clone();
-
-        if (!this.previousPosition) {
-            this.previousPosition = currentPosition;
-            return;
-        }
-
-        const distanceTravelled = currentPosition.distanceTo(this.previousPosition);
+        const distanceTravelled = this.motion?.distance || 0;
         const fuelToConsume = distanceTravelled * CONSTANTS.FUEL_CONSUMPTION_RATE;
 
-        if (this.fuel - fuelToConsume < this.calculateRequiredFuelToMoon()) {
-            console.warn('Yakıt kritik seviyede, tüketim durduruldu.');
+        if (this.fuel <= fuelToConsume + this.calculateRequiredFuelToMoon()) {
+            console.warn(`⚠️ Roket ${this.index}: Yakıt kritik seviyede, Ay'a dönüş gerekiyor.`);
+            this.returnToMoon();
             return;
         }
 
         this.fuel -= fuelToConsume;
-        this.previousPosition = currentPosition;
-
-        console.log(`Yakıt Tüketildi: ${fuelToConsume.toFixed(2)} L, Kalan Yakıt: ${this.fuel.toFixed(2)} L`);
+        console.log(
+            `⛽ Roket ${this.index}: Tüketilen Yakıt: ${fuelToConsume.toFixed(2)} L, Kalan Yakıt: ${this.fuel.toFixed(2)} L`
+        );
     }
 
     /**
-     * 🚀 Uyduya yakıt aktarır.
-     * @param {Object} satellite - Hedef uydu.
-     */
-    refuelSatellite(satellite) {
-        const requiredFuel = 100 - satellite.fuel;
-        const fuelToTransfer = Math.min(requiredFuel, CONSTANTS.FUEL_TRANSFER_RATE, this.fuel - this.calculateRequiredFuelToMoon());
-
-        if (fuelToTransfer <= 0) {
-            console.warn('Yeterli yakıt yok, aktarım durduruldu.');
-            return;
-        }
-
-        satellite.fuel += fuelToTransfer;
-        this.fuel -= fuelToTransfer;
-
-        console.log(`Uyduya ${fuelToTransfer.toFixed(2)} L yakıt aktarıldı. Roket kalan yakıt: ${this.fuel.toFixed(2)} L`);
-    }
-
-    /**
-     * 🌕 Ay'a dönüş için gerekli yakıtı hesaplar.
+     * 🌑 Ay'a dönüş için gerekli yakıtı hesaplar.
+     * @returns {number} Ay'a dönüş için gerekli yakıt miktarı.
      */
     calculateRequiredFuelToMoon() {
         const distanceToMoon = CONSTANTS.MOON_ORBIT_RADIUS;
-        return (distanceToMoon / CONSTANTS.ROCKET_SPEED) * CONSTANTS.FUEL_CONSUMPTION_RATE * 1.5;
+        return distanceToMoon * CONSTANTS.FUEL_CONSUMPTION_RATE;
+    }
+
+    /**
+     * 🌑 Ay'a dönüşü başlatır.
+     */
+    returnToMoon() {
+        this.motion.planPath(this, {
+            mesh: { position: new THREE.Vector3(CONSTANTS.MOON_ORBIT_RADIUS, 0, 0) },
+        });
+        this.currentTarget = null;
     }
 
     /**
@@ -179,8 +140,10 @@ class Rocket {
         this.mesh.position.set(CONSTANTS.MOON_ORBIT_RADIUS, 0, 0);
         this.motion.reset();
         this.fuel = CONSTANTS.MAX_FUEL;
-        this.previousPosition = null;
-        console.log('Roket sıfırlandı ve başlangıç konumuna döndü.');
+        this.currentTarget = null;
+        this.alive = true;
+
+        console.log(`🔄 Roket ${this.index} sıfırlandı ve başlangıç konumuna döndü.`);
     }
 }
 

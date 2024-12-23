@@ -1,67 +1,112 @@
 class InfoPanel {
     constructor() {
-        this.infoElement = document.getElementById('info');
-        this.statsElement = document.getElementById('stats');
-        this.costElement = document.getElementById('cost');
+        // DOM elemanlarını doğrudan başlat
         this.routeElement = document.getElementById('route');
+        this.costElement = document.getElementById('cost');
+        this.statusElement = document.getElementById('status'); // Ek özellik için
+
+        // Kontrol ve uyarı mekanizması
+        this.checkElements();
     }
 
     /**
-     * @param {number} currentTargetIndex - Roketin mevcut hedef uydu indeksi.
-     * @param {number} rocketFuel - Roketin mevcut yakıt miktarı.
-     * @param {Array} satellites - Simülasyondaki tüm uyduların listesi.
-     * @param {number} simulationTime - Simülasyonun toplam geçen zamanı (saniye cinsinden).
+     * ✅ Gerekli DOM elemanlarının varlığını kontrol eder.
      */
-    
-    update(currentTargetIndex, rocketFuel, satellites, simulationTime) {
-        const elapsedDays = Math.floor(simulationTime / CONSTANTS.SECONDS_IN_A_DAY);
-        const elapsedHours = Math.floor((simulationTime % CONSTANTS.SECONDS_IN_A_DAY) / 3600);
-        const elapsedMinutes = Math.floor((simulationTime % 3600) / 60);
-    
-        this.infoElement.innerHTML = `
-            <h3>Uzay Simülasyonu</h3>
-            <strong>Simülasyon Zamanı:</strong> ${elapsedDays} gün, ${elapsedHours} saat, ${elapsedMinutes} dakika<br>
-            <strong>Simülasyon Hızı:</strong> ${CONSTANTS.SIMULATION_SPEED}x
-        `;
-    
-        this.statsElement.innerHTML = `
-            <h4>Roket Bilgileri</h4>
-            <strong>Mevcut Hedef:</strong> ${currentTargetIndex + 1}<br>
-            <strong>Yakıt Seviyesi:</strong> ${rocketFuel.toFixed(1)} L<br>
-            <h4>Uydu Bilgileri</h4>
-            ${satellites.map((sat, i) => {
-                const remainingLifetime = sat.getRemainingLifetime ? sat.getRemainingLifetime() : 'N/A';
-                return `<strong>Uydu ${i + 1}:</strong> 
-                    Yaş: ${sat.age.toFixed(2)} gün, 
-                    Kalan Ömür: ${(typeof remainingLifetime === 'number' ? remainingLifetime.toFixed(2) : 'N/A')} yıl, 
-                    Yakıt: ${sat.fuel.toFixed(1)} L`;
-            }).join('<br>')}
-        `;
+    checkElements() {
+        if (!this.routeElement) {
+            console.error('❌ Hata: "route" elementi bulunamadı. Lütfen index.html dosyasını kontrol edin.');
+        }
+        if (!this.costElement) {
+            console.error('❌ Hata: "cost" elementi bulunamadı. Lütfen index.html dosyasını kontrol edin.');
+        }
+        if (!this.statusElement) {
+            console.warn('⚠️ Uyarı: "status" elementi tanımlı değil. Gelecekte ek bilgi gösterimleri için eklenebilir.');
+        }
     }
-    
+
+    /**
+     * 📍 Optimum rotayı günceller.
+     * @param {Array} route - Optimum rota dizisi.
+     */
     updateRoute(route) {
+        if (!this.routeElement) {
+            console.warn('⚠️ Rota elementi mevcut değil.');
+            return;
+        }
+
+        if (!route || route.length === 0) {
+            this.routeElement.innerHTML = `
+                <h4>Optimum Rota</h4>
+                ❌ Geçerli bir rota bulunamadı.
+            `;
+            return;
+        }
+
         this.routeElement.innerHTML = `
             <h4>Optimum Rota</h4>
-            ${route.map(node => node.name).join(' → ')}
+            ${route.map(node => node.name || 'Bilinmeyen').join(' → ')}
         `;
     }
-    
+
+    /**
+     * 💰 Toplam maliyeti günceller.
+     * @param {number} totalCost - Toplam maliyet.
+     */
     updateCost(totalCost) {
+        if (!this.costElement) {
+            console.warn('⚠️ Maliyet elementi mevcut değil.');
+            return;
+        }
+
         this.costElement.innerHTML = `
             <h4>Toplam Maliyet</h4>
-            ${totalCost.toFixed(2)}
+            ${totalCost === Infinity ? '∞' : totalCost.toFixed(2)} Birim
         `;
     }
-    
-    updateObjectiveDetails(activeRockets, totalCost) {
-        this.routeElement.innerHTML = `
-            <h4>Aktif Roketler:</h4>
-            ${activeRockets.map(rocket => rocket.name).join(', ')}
-            <h4>Toplam Maliyet:</h4>
-            ${totalCost.toFixed(2)}
+
+    /**
+     * 📊 Simülasyon durumunu günceller.
+     * @param {string} status - Simülasyon durumu.
+     */
+    updateStatus(status) {
+        if (!this.statusElement) {
+            console.warn('⚠️ Durum elementi mevcut değil.');
+            return;
+        }
+
+        this.statusElement.innerHTML = `
+            <h4>Simülasyon Durumu</h4>
+            ${status}
         `;
     }
-    
+
+    /**
+     * 🔄 Tüm paneli sıfırlar.
+     */
+    reset() {
+        if (this.routeElement) {
+            this.routeElement.innerHTML = `
+                <h4>Optimum Rota</h4>
+                Henüz hesaplanmadı.
+            `;
+        }
+
+        if (this.costElement) {
+            this.costElement.innerHTML = `
+                <h4>Toplam Maliyet</h4>
+                Henüz hesaplanmadı.
+            `;
+        }
+
+        if (this.statusElement) {
+            this.statusElement.innerHTML = `
+                <h4>Simülasyon Durumu</h4>
+                Beklemede...
+            `;
+        }
+
+        console.log('🔄 InfoPanel sıfırlandı.');
+    }
 }
 
 export default InfoPanel;
