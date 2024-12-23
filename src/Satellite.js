@@ -124,13 +124,27 @@ class Satellite {
     /**
      * 📍 Uydu izini günceller.
      */
-    updateTrail() {
-        this.trail.positions.push(this.mesh.position.clone());
-        if (this.trail.positions.length > CONSTANTS.MAX_TRAIL_LENGTH) {
-            this.trail.positions.shift();
-        }
-        this.trail.line.geometry.setFromPoints(this.trail.positions);
+    /**
+ * 📍 Uydu izini günceller.
+ */
+updateTrail() {
+    if (!this.trail || !this.trail.line || !this.trail.line.geometry) {
+        console.warn(`⚠️ Uydu ${this.index}: İz bilgisi mevcut değil.`);
+        return;
     }
+
+    this.trail.positions.push({ x: this.position.x, y: this.position.y, z: this.position.z });
+
+    if (this.trail.positions.length > CONSTANTS.MAX_TRAIL_LENGTH) {
+        this.trail.positions.shift();
+    }
+
+    this.trail.line.geometry.dispose(); // Eski geometriyi temizle
+    this.trail.line.geometry = new THREE.BufferGeometry().setFromPoints(
+        this.trail.positions.map(pos => new THREE.Vector3(pos.x, pos.y, pos.z))
+    );
+}
+
 
     /**
      * 🔄 Uyduyu sıfırlar.

@@ -8,6 +8,34 @@ class InfoPanel {
         // Kontrol ve uyarı mekanizması
         this.checkElements();
     }
+/**
+ * 🔄 Simülasyon genel durumunu günceller.
+ * @param {number} simulationTime - Simülasyon süresi.
+ * @param {Array} satellites - Uydu listesi.
+ * @param {Array} rockets - Roket listesi.
+ */
+update(simulationTime, satellites, rockets) {
+    if (this.statusElement) {
+        this.statusElement.innerHTML = `
+            <h4>Simülasyon Durumu</h4>
+            Zaman: ${simulationTime.toFixed(1)} saniye
+        `;
+    }
+
+    if (this.routeElement) {
+        this.routeElement.innerHTML = `
+            <h4>Roket Rotası</h4>
+            ${rockets.map(rocket => `🚀 Roket ${rocket.index}: ${rocket.currentTarget?.name || 'Hedef Yok'}`).join('<br>')}
+        `;
+    }
+
+    if (this.costElement) {
+        this.costElement.innerHTML = `
+            <h4>Toplam Maliyet</h4>
+            ${rockets.reduce((sum, rocket) => sum + rocket.fuel, 0).toFixed(2)} Birim
+        `;
+    }
+}
 
     /**
      * ✅ Gerekli DOM elemanlarının varlığını kontrol eder.
@@ -69,16 +97,14 @@ class InfoPanel {
      * @param {string} status - Simülasyon durumu.
      */
     updateStatus(status) {
-        if (!this.statusElement) {
-            console.warn('⚠️ Durum elementi mevcut değil.');
-            return;
+        if (this.statusElement) {
+            this.statusElement.innerHTML = `
+                <h4>Simülasyon Durumu</h4>
+                ${status}
+            `;
         }
-
-        this.statusElement.innerHTML = `
-            <h4>Simülasyon Durumu</h4>
-            ${status}
-        `;
     }
+    
 
     /**
      * 🔄 Tüm paneli sıfırlar.

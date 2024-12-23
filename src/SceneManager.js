@@ -84,10 +84,23 @@ class SceneManager {
      * @param {Satellite} satellite
      */
     addSatellite(satellite) {
-        if (!satellite.mesh) return;
+        if (!satellite || !satellite.mesh) {
+            console.warn('⚠️ Geçersiz uydu nesnesi.');
+            return;
+        }
         this.scene.add(satellite.mesh);
         console.log(`🛰️ Uydu ${satellite.index} sahneye eklendi.`);
     }
+    
+    addRocket(rocket) {
+        if (!rocket || !rocket.mesh) {
+            console.warn('⚠️ Geçersiz roket nesnesi.');
+            return;
+        }
+        this.scene.add(rocket.mesh);
+        console.log(`🚀 Roket ${rocket.index} sahneye eklendi.`);
+    }
+    
     clearPaths() {
         const toRemove = [];
         this.scene.traverse((child) => {
@@ -104,23 +117,9 @@ class SceneManager {
     }
     
 
-    /**
-     * 🚀 Roketi sahneye ekler.
-     * @param {Rocket} rocket
-     */
-    addRocket(rocket) {
-        if (!rocket?.mesh) {
-            console.error('❌ Geçersiz roket nesnesi.');
-            return;
-        }
-        this.scene.add(rocket.mesh);
-        console.log(`🚀 Roket ${rocket.index} sahneye eklendi.`);
-    }
 
-    /**
-     * 📦 Genel sahneye herhangi bir nesne ekler.
-     * @param {THREE.Object3D} object
-     */
+
+    
     addObject(object) {
         if (!object) {
             console.error('❌ Geçersiz nesne.');

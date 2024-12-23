@@ -53,6 +53,23 @@ class Rocket {
     }
 
     /**
+ * 🚀 Optimize edilmiş rotayı takip eder.
+ * @param {Array} route - Optimize edilmiş rota dizisi.
+ */
+followOptimizedRoute(route) {
+    if (!Array.isArray(route) || route.length === 0) {
+        console.warn(`⚠️ Roket ${this.index}: Geçersiz rota verisi.`);
+        return;
+    }
+
+    this.optimizedRoute = route;
+    this.currentTargetIndex = 0;
+    console.log(
+        `🚀 Roket ${this.index}: Optimize rota belirlendi → ${route.map(node => node.name || 'N/A').join(' → ')}`
+    );
+}
+
+    /**
      * 🎯 Belirli bir uyduya hareket eder.
      * @param {Object} target - Hedef uydu nesnesi
      */
@@ -181,6 +198,26 @@ class Rocket {
         this.currentTarget = { name: 'Moon' };
         console.log(`🚀 Roket ${this.index}: Ay'a dönüş başlatıldı.`);
     }
+
+
+
+checkFuelForReturn() {
+    const requiredFuelToMoon = this.calculateRequiredFuelToMoon();
+
+    if (this.fuel <= requiredFuelToMoon && this.currentTarget?.name !== 'Moon') {
+        console.warn(`🚨 Roket ${this.index}: Yakıt kritik seviyede, Ay'a dönüş başlatılıyor.`);
+        this.returnToMoon();
+        return true;
+    }
+
+    if (this.currentTarget?.name === 'Moon') {
+        console.log(`🌑 Roket ${this.index}: Zaten Ay'a dönüyor.`);
+        return true;
+    }
+
+    return false;
+}
+
 
 
 }

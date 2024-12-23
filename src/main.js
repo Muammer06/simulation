@@ -61,13 +61,35 @@ document.addEventListener('DOMContentLoaded', () => {
         await simulation.optimizeRouteWithTabuSearch();
         // 🌟 Görsel Güncelleme
         simulation.sceneManager.render();
+        if (simulation.rockets.length === 0 || simulation.satellites.length === 0) {
+            console.error('❌ Simülasyon başlatılamıyor: Roket veya uydu yok.');
+            return;
+        }
+    
+        await simulation.optimizeRouteWithTabuSearch();
+        simulation.startSimulation();
     });
 
     // 🚀 Simülasyonu Başlat
-    startButton.addEventListener('click', () => {
-        console.log(`▶️ Simülasyon Başlatılıyor...`);
-        simulation.startSimulation();
+    simulateButton.addEventListener('click', async () => {
+        const satelliteCount = parseInt(document.getElementById('satelliteCount').value) || 10;
+        const rocketCount = parseInt(document.getElementById('rocketCount').value) || 5;
+        const iterationCount = parseInt(document.getElementById('iterationCount').value) || 100;
+    
+        console.log(`🛰️ Uydu Sayısı: ${satelliteCount}`);
+        console.log(`🚀 Roket Sayısı: ${rocketCount}`);
+        console.log(`🔄 İterasyon Sayısı: ${iterationCount}`);
+    
+        if (typeof simulation.initialize === 'function') {
+            simulation.reset();
+            simulation.initialize(satelliteCount, rocketCount);
+            await simulation.optimizeRouteWithTabuSearch();
+        } else {
+            console.error('❌ Simülasyon başlatılamıyor: initialize fonksiyonu mevcut değil.');
+        }
     });
+    
+    
 
     // 🛑 Simülasyonu Durdur
     stopButton.addEventListener('click', () => {

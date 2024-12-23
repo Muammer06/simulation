@@ -16,7 +16,7 @@ export class SpaceSimulation {
         this.satellites = [];
         this.rockets = [];
         this.infoPanel = new InfoPanel();
-
+        this.tabuSearch = new TabuSearch(this.satellites, this.rockets);
         this.simulationRunning = false;
         this.simulationTime = 0;
         this.optimizedRoute = [];
@@ -26,19 +26,49 @@ export class SpaceSimulation {
     }
 
     initializeScene() {
+        console.log('%c🌍 Sahne Başlatılıyor...', 'color: blue; font-weight: bold;');
+    
         this.sceneManager.createEarth();
         this.sceneManager.createMoon();
     
+        // Kullanıcıdan parametreleri al
         const satelliteCount = parseInt(document.getElementById('satelliteCount').value) || 10;
+        const rocketCount = parseInt(document.getElementById('rocketCount').value) || 5;
+    
+        // Uyduları oluştur
+        this.satellites = [];
         for (let i = 0; i < satelliteCount; i++) {
             const satellite = new Satellite(i);
             this.satellites.push(satellite);
             this.sceneManager.addSatellite(satellite);
         }
     
-        const rocketCount = parseInt(document.getElementById('rocketCount').value) || 5;
+        // Roketleri oluştur
+        this.rockets = [];
         for (let i = 0; i < rocketCount; i++) {
-            const rocket = new Rocket(i, CONSTANTS.MAX_FUEL);
+            const rocket = new Rocket(i);
+            this.rockets.push(rocket);
+            this.sceneManager.addRocket(rocket);
+        }
+    
+        this.sceneManager.render();
+    }
+    
+    
+    initialize(satelliteCount = 10, rocketCount = 2) {
+        console.log('%c🌍 Simülasyon Başlatılıyor...', 'color: blue; font-weight: bold;');
+        this.reset();
+    
+        // Uyduları oluştur
+        for (let i = 0; i < satelliteCount; i++) {
+            const satellite = new Satellite(i);
+            this.satellites.push(satellite);
+            this.sceneManager.addSatellite(satellite);
+        }
+    
+        // Roketleri oluştur
+        for (let i = 0; i < rocketCount; i++) {
+            const rocket = new Rocket(i);
             this.rockets.push(rocket);
             this.sceneManager.addRocket(rocket);
         }
@@ -53,25 +83,24 @@ export class SpaceSimulation {
      */
     update() {
         this.simulationTime += CONSTANTS.SIMULATION_TIME_STEP;
-
+    
         this.earth.rotate(CONSTANTS.SIMULATION_TIME_STEP);
         this.moon.update(CONSTANTS.SIMULATION_TIME_STEP);
-        this.satellites.forEach(sat => sat.update(CONSTANTS.SIMULATION_TIME_STEP));
-        this.rockets.forEach(rocket => rocket.update(CONSTANTS.SIMULATION_TIME_STEP));
-
-        this.infoPanel.update(this.simulationTime, this.satellites, this.rockets);
-
-        this.rockets.forEach((rocket) => {
-            rocket.update(CONSTANTS.SIMULATION_TIME_STEP);
-            if (!rocket.alive) {
-                console.warn(`❌ Roket ${rocket.index}: Devre dışı, yakıt tamamen bitti.`);
+    
+        this.satellites.forEach(satellite => {
+            satellite.update(CONSTANTS.SIMULATION_TIME_STEP);
+        });
+    
+        this.rockets.forEach(rocket => {
+            if (!rocket.checkFuelForReturn()) {
+                rocket.update(CONSTANTS.SIMULATION_TIME_STEP);
             }
         });
     
-        this.satellites.forEach(satellite => satellite.update(CONSTANTS.SIMULATION_TIME_STEP));
-    
+        this.infoPanel.update(this.simulationTime, this.satellites, this.rockets);
         this.sceneManager.render();
     }
+    
 
     /**
      * 🛠️ Sahneyi sıfırlar.
@@ -123,7 +152,7 @@ export class SpaceSimulation {
         console.log('%c🚀 TABU Search Başlatılıyor...', 'color: blue; font-weight: bold;');
         this.tabuSearch = new TabuSearch(this.satellites, this.rockets, iterationCount);
 
-        const optimizedResult = await this.tabuSearch.optimize();
+        const optimizedResult = this.tabuSearch.optimize();
 
         this.optimizedRoute = optimizedResult.route;
         this.totalCost = optimizedResult.cost;
@@ -155,7 +184,7 @@ export class SpaceSimulation {
                 while (!rocket.motion.updatePosition(rocket, CONSTANTS.SIMULATION_TIME_STEP)) {
                     rocket.consumeFuel(CONSTANTS.SIMULATION_TIME_STEP);
                     this.sceneManager.render();
-                    await this.sleep(100); // Kısa gecikme
+                     this.sleep(100); // Kısa gecikme
                 }
 
                 console.log(`🚀 Roket ${rocket.index}, ${currentTarget.name} hedefine ulaştı.`);
@@ -173,19 +202,46 @@ export class SpaceSimulation {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+  
     async optimizeRouteWithTabuSearch() {
         console.log('%c🚀 TABU Search Optimizasyonu Başlatılıyor...', 'color: blue; font-weight: bold;');
-        this.sceneManager.clearPaths(); // Eski yolları temizle
+        this.sceneManager.clearPaths();
     
-        this.tabuSearch = new TabuSearch(this.satellites, this.rockets);
-        const optimizedResult = await this.tabuSearch.optimize();
+        if (!this.tabuSearch) {
+            this.tabuSearch = new TabuSearch(this.satellites, this.rockets);
+        }
     
-        this.optimizedRoute = optimizedResult.route;
-        this.totalCost = optimizedResult.cost;
+        const optimizedResult = this.tabuSearch.optimize();
     
-        console.log(`✅ Nihai Rota: ${this.optimizedRoute.map(node => node.name).join(' → ')}`);
+        if (!optimizedResult || !optimizedResult.routes || !optimizedResult.costs) {
+            console.error('❌ TABU Search geçersiz sonuç döndürdü:', optimizedResult);
+            return;
+        }
+    
+        this.optimizedRoutes = optimizedResult.routes;
+        this.totalCost = optimizedResult.costs.reduce((sum, cost) => sum + cost, 0);
+    
+        console.log(
+            `%c✅ Nihai Rota: ${this.optimizedRoutes.flat().map(node => node?.name || 'N/A').join(' → ')}`,
+            'color: green; font-weight: bold;'
+        );
         console.log(`💰 Toplam Maliyet: ${this.totalCost.toFixed(2)}`);
+    
+        // Roketlere optimize edilmiş rotaları ata
+        this.rockets.forEach((rocket, index) => {
+            if (typeof rocket.followOptimizedRoute === 'function') {
+                rocket.followOptimizedRoute(this.optimizedRoutes[index]);
+            } else {
+                console.warn(`⚠️ Roket ${index}: 'followOptimizedRoute' fonksiyonu bulunamadı.`);
+            }
+        });
+    
+        this.infoPanel.updateRoute(this.optimizedRoutes.flat());
+        this.infoPanel.updateCost(this.totalCost);
+    
+        this.startSimulation();
     }
+    
     
     
 }
