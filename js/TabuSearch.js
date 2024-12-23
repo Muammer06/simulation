@@ -5,31 +5,12 @@ class TabuSearch {
         this.tabuList = [];
         this.bestRoute = [];
         this.bestCost = Infinity;
-        this.maxIterations = CONSTANTS.TABU_ITERATIONS;
-        this.tabuListSize = CONSTANTS.TABU_LIST_SIZE;
-    }
-
-    calculateCost(route) {
-        let totalDistance = 0;
-        let totalFuel = 0;
-
-        for (let i = 0; i < route.length - 1; i++) {
-            const distance = route[i].mesh.position.distanceTo(route[i + 1].mesh.position);
-            totalDistance += distance;
-            totalFuel += distance * CONSTANTS.FUEL_CONSUMPTION_RATE;
-        }
-
-        return (CONSTANTS.W1 * totalDistance) + (CONSTANTS.W2 * totalFuel);
-    }
-
-    generateNeighbor(route) {
-        const newRoute = [...route];
-        const [i, j] = [Math.floor(Math.random() * route.length), Math.floor(Math.random() * route.length)];
-        [newRoute[i], newRoute[j]] = [newRoute[j], newRoute[i]];
-        return newRoute;
+        this.maxIterations = 100;
+        this.tabuListSize = 50;
     }
 
     optimize() {
+        console.log('TABU Search başladı...');
         let currentRoute = [this.rocket, ...this.satellites, this.rocket];
         let currentCost = this.calculateCost(currentRoute);
 
@@ -53,6 +34,23 @@ class TabuSearch {
             }
         }
 
+        console.log('TABU Search tamamlandı.');
         return { route: this.bestRoute, cost: this.bestCost };
     }
+
+    calculateCost(route) {
+        let totalDistance = 0;
+        for (let i = 0; i < route.length - 1; i++) {
+            totalDistance += route[i].mesh.position.distanceTo(route[i + 1].mesh.position);
+        }
+        return totalDistance;
+    }
+
+    generateNeighbor(route) {
+        const newRoute = [...route];
+        const [i, j] = [Math.floor(Math.random() * route.length), Math.floor(Math.random() * route.length)];
+        [newRoute[i], newRoute[j]] = [newRoute[j], newRoute[i]];
+        return newRoute;
+    }
 }
+

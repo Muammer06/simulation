@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,39 +7,46 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- Simülasyon Bilgileri -->
     <div id="info">Uzay Simülasyonu</div>
     <div id="stats"></div>
+    <div id="cost"></div>
+    <div id="route"></div>
 
-    
-
-
+    <!-- Kontrol Paneli -->
     <div id="controls">
+        <h3>Kontrol Paneli</h3>
         <label for="speedControl">Simülasyon Hızı:</label>
         <input type="number" id="speedControl" value="1" min="0.1" step="0.1">x<br>
         
         <label for="satelliteCount">Uydu Sayısı:</label>
         <input type="number" id="satelliteCount" value="30" min="1" max="100" step="1"><br>
         
+        <h4>Optimizasyon Parametreleri</h4>
+        <label for="w1-slider">Mesafe Ağırlığı (w1):</label>
+        <input type="range" id="w1-slider" min="0" max="1" step="0.1" value="0.7"><br>
+        <label for="w2-slider">Yakıt Ağırlığı (w2):</label>
+        <input type="range" id="w2-slider" min="0" max="1" step="0.1" value="0.3"><br>
+        
         <button id="startButton">Başlat</button>
         <button id="stopButton">Durdur</button>
         <button id="resumeButton">Devam Ettir</button>
     </div>
-    
-    
 
-    
+    <!-- Simülasyon Ekranı -->
+    <div id="simulationCanvas"></div>
 
-    <!-- Three.js kütüphanesi -->
+    <!-- Three.js Kütüphaneleri -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
-    <!-- Debug için konsol logları ekleyin -->
+    <!-- Debug için konsol logları -->
     <script>
         console.log('Three.js yüklendi:', typeof THREE !== 'undefined');
         console.log('OrbitControls yüklendi:', typeof THREE.OrbitControls !== 'undefined');
     </script>
 
-    <!-- Uygulama kodları -->
+    <!-- Uygulama Kodları -->
     <script src="js/constants.js"></script>
     <script>console.log('Constants yüklendi:', typeof CONSTANTS !== 'undefined');</script>
     
@@ -49,30 +56,34 @@
     <script src="js/Earth.js"></script>
     <script>console.log('Earth yüklendi:', typeof Earth !== 'undefined');</script>
     
-    <script src="js/Satellite.js"></script>
-    <script>console.log('Satellite yüklendi:', typeof Satellite !== 'undefined');</script>
-    
     <script src="js/Moon.js"></script> 
     <script>console.log('Moon yüklendi:', typeof Moon !== 'undefined');</script>
 
+    <script src="js/Satellite.js"></script>
+    <script>console.log('Satellite yüklendi:', typeof Satellite !== 'undefined');</script>
+    
     <script src="js/RocketMotion.js"></script>
     <script>console.log('RocketMotion yüklendi:', typeof RocketMotion !== 'undefined');</script>
+    
     <script src="js/Rocket.js"></script>
     <script>console.log('Rocket yüklendi:', typeof Rocket !== 'undefined');</script>
     
-    <script src="js/InfoPanel.js"></script> <!-- DİKKAT: InfoPanel doğru sırada mı? -->
+    <script src="js/InfoPanel.js"></script>
     <script>console.log('InfoPanel yüklendi:', typeof InfoPanel !== 'undefined');</script>
+
+    <script src="js/TabuSearch.js"></script>
+    <script>console.log('TabuSearch yüklendi:', typeof TabuSearch !== 'undefined');</script>
     
     <script src="js/main.js"></script>
     <script>console.log('Main yüklendi');</script>
 
-    <!-- Test kodu ekleyin -->
+    <!-- Simülasyon Başlatma -->
     <script>
         window.addEventListener('load', () => {
             try {
                 console.log('Simülasyon başlatılıyor...');
                 const simulation = new SpaceSimulation();
-                console.log('Simülasyon başlatıldı');
+                console.log('Simülasyon başlatıldı.');
             } catch (error) {
                 console.error('Simülasyon başlatılırken hata oluştu:', error);
             }

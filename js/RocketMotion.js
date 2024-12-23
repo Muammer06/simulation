@@ -1,141 +1,115 @@
-// RocketMotion.js
 class RocketMotion {
     constructor() {
         this.currentPath = null;
-        this.targetSatellite = null;
         this.progress = 0;
-        this.orbitRadius = CONSTANTS.GEO_ORBIT_RADIUS;
-        this.speed = 0.002; // Hareket hızı
     }
 
-    // Yeni bir yol planla
-    planPath(rocket, targetSatellite) {
-        if (!rocket || !targetSatellite || !targetSatellite.mesh) {
-            console.warn('Rota planlama başarısız: Roket veya hedef uydu geçersiz.');
+    /**
+     * Roketin hedef uyduya olan yörüngesini planlar.
+     * @param {Rocket} rocket - Roket nesnesi.
+     * @param {Satellite} target - Hedef uydu nesnesi.
+     */
+    planPath(rocket, target) {
+        if (!rocket || !rocket.mesh || !target || !target.mesh) {
+            console.warn('Roket veya hedef uydu bilgileri eksik.');
             return;
         }
-    
-        const startPos = rocket.getPosition();
-        const targetPos = targetSatellite.mesh.position;
-    
-        const earthCenter = new THREE.Vector3(0, 0, 0);
-        const orbitHeight = CONSTANTS.GEO_ORBIT_RADIUS * 1.1;
-    
-        const startDirection = startPos.clone().sub(earthCenter).normalize();
-        const targetDirection = targetPos.clone().sub(earthCenter).normalize();
-    
-        const midPoint = new THREE.Vector3().addVectors(
-            startDirection.multiplyScalar(orbitHeight),
-            targetDirection.multiplyScalar(orbitHeight)
-        ).multiplyScalar(0.5);
-    
+
+        // Roketin ve hedef uydunun pozisyonlarını al
+        const startPos = rocket.mesh.position.clone();
+        const targetPos = target.mesh.position.clone();
+
+        // Başlangıç ve hedef arasındaki mesafeyi hesapla
+        const distance = startPos.distanceTo(targetPos);
+
+        // Ara nokta hesapla (yörünge yüksekliğiyle birlikte)
+        const midPoint = new THREE.Vector3().addVectors(startPos, targetPos).multiplyScalar(0.5);
+        const orbitHeight = CONSTANTS.GEO_ORBIT_RADIUS * 0.5; // Dünya yörüngesinin yarısı kadar yükseklik
+        midPoint.y += orbitHeight; // Ara noktayı yukarı kaydır
+
+        // Yörünge parametrelerini kaydet
         this.currentPath = {
-            start: startPos.clone(),
+            start: startPos,
             midPoint: midPoint,
-            target: targetPos.clone(),
-            phase: 'transfer'
+            target: targetPos,
+            distance: distance
         };
-    
-        this.progress = 0;
+
+        this.progress = 0; // Hareket ilerleme durumu sıfırla
+
+        console.log(`Yörünge planlandı: Start(${startPos.x.toFixed(2)}, ${startPos.y.toFixed(2)}), Target(${targetPos.x.toFixed(2)}, ${targetPos.y.toFixed(2)}), MidPoint(${midPoint.x.toFixed(2)}, ${midPoint.y.toFixed(2)})`);
     }
-    
+
+    /**
+     * Roketi hedefe doğru ilerletir.
+     * @param {Rocket} rocket - Roket nesnesi.
+     * @param {number} deltaTime - Geçen süre.
+     * @returns {boolean} - Roket hedefe ulaştıysa true döner.
+     */
     updatePosition(rocket, deltaTime) {
-        if (!this.currentPath || !this.currentPath.start || !this.currentPath.midPoint || !this.currentPath.target) {
-            console.warn('Geçersiz rota parametreleri, hareket durduruldu.');
-            this.currentPath = null;
+        if (!this.currentPath) {
+            console.warn('Hareket yolu tanımlı değil.');
             return false;
         }
-    
-        // Hız faktörünü deltaTime ile sınırla
-        const step = CONSTANTS.ROCKET_SPEED * deltaTime;
-        const totalDistance = this.currentPath.start.distanceTo(this.currentPath.target);
-        this.progress += step / totalDistance;
-    
-        // İlerleme sınırlandırılması
-        if (this.progress > 1) {
-            this.progress = 1;
-        }
-    
-        if (this.progress < 0.5) {
-            // İlk etap: Başlangıçtan ara noktaya
-            rocket.mesh.position.lerpVectors(
-                this.currentPath.start,
-                this.currentPath.midPoint,
-                this.progress * 2
-            );
-        } else if (this.progress <= 1) {
-            // İkinci etap: Ara noktadan hedefe
-            rocket.mesh.position.lerpVectors(
-                this.currentPath.midPoint,
-                this.currentPath.target,
-                (this.progress - 0.5) * 2
-            );
-        }
-    
-        // Hedefe ulaşıldı
+
+        // Hareket ilerlemesini hesapla
+        this.progress += deltaTime * CONSTANTS.ROCKET_SPEED / this.currentPath.distance;
+
         if (this.progress >= 1) {
             rocket.mesh.position.copy(this.currentPath.target);
             this.currentPath = null;
             this.progress = 0;
-            return true;
+            return true; // Hedefe ulaşıldı
         }
-    
-        return false;
+
+        // Bezier eğrisi üzerinden hareket
+        const position = this.calculateOrbitPosition(
+            this.currentPath.start,
+            this.currentPath.midPoint,
+            this.currentPath.target,
+            this.progress
+        );
+
+        rocket.mesh.position.copy(position);
+        return false; // Hedefe henüz ulaşılmadı
     }
-    
-    
 
-    calculateOrbitPosition(start, end, progress) {
-        // Bezier eğrisi kullanarak yörünge hesapla
-        const midPoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-        const up = new THREE.Vector3(0, 0, 1);
-        
-        // Yörünge yüksekliği için sinüs fonksiyonu kullan
-        const heightOffset = Math.sin(progress * Math.PI) * this.orbitParams.heightOffset;
-        midPoint.add(up.multiplyScalar(heightOffset));
-
-        // Quadratic Bezier eğrisi
-        const p0 = start;
-        const p1 = midPoint;
-        const p2 = end;
-
+    /**
+     * Bezier eğrisi üzerinde belirli bir ilerleme oranına göre pozisyonu hesaplar.
+     * @param {THREE.Vector3} start - Başlangıç noktası.
+     * @param {THREE.Vector3} mid - Ara nokta (yörünge).
+     * @param {THREE.Vector3} end - Hedef noktası.
+     * @param {number} t - İlerleme oranı (0 ile 1 arasında).
+     * @returns {THREE.Vector3} - Hesaplanan pozisyon.
+     */
+    calculateOrbitPosition(start, mid, end, t) {
         const position = new THREE.Vector3();
-        
-        // Bezier interpolasyonu
-        position.x = this.quadraticBezier(p0.x, p1.x, p2.x, progress);
-        position.y = this.quadraticBezier(p0.y, p1.y, p2.y, progress);
-        position.z = this.quadraticBezier(p0.z, p1.z, p2.z, progress);
-
+        position.x = this.quadraticBezier(start.x, mid.x, end.x, t);
+        position.y = this.quadraticBezier(start.y, mid.y, end.y, t);
+        position.z = this.quadraticBezier(start.z, mid.z, end.z, t);
         return position;
     }
 
+    /**
+     * Bezier eğrisi hesaplaması.
+     * @param {number} p0 - Başlangıç noktası değeri.
+     * @param {number} p1 - Ara nokta değeri.
+     * @param {number} p2 - Hedef noktası değeri.
+     * @param {number} t - İlerleme oranı (0 ile 1 arasında).
+     * @returns {number} - Bezier eğrisi sonucu.
+     */
     quadraticBezier(p0, p1, p2, t) {
-        const oneMinusT = 1 - t;
-        return oneMinusT * oneMinusT * p0 + 
-               2 * oneMinusT * t * p1 + 
-               t * t * p2;
+        return (1 - t) ** 2 * p0 + 2 * (1 - t) * t * p1 + t ** 2 * p2;
     }
 
-    updateRocketOrientation(rocket, targetPos) {
-        const direction = new THREE.Vector3()
-            .subVectors(targetPos, rocket.mesh.position)
-            .normalize();
-
-        if (direction.length() > 0.001) {
-            rocket.mesh.quaternion.setFromUnitVectors(
-                new THREE.Vector3(0, 1, 0),
-                direction
-            );
-        }
-    }
-
-    getProgress() {
-        return this.progress;
-    }
-
+    /**
+     * Hareket verilerini sıfırlar.
+     */
     reset() {
         this.currentPath = null;
-        this.targetSatellite = null;
         this.progress = 0;
+        console.log('Yörünge hareketi sıfırlandı.');
     }
 }
+
+// RocketMotion sınıfını dışa aktar

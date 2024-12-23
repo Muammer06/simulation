@@ -10,6 +10,10 @@ class SpaceSimulation {
         this.simulationPaused = false;
         this.simulationTime = 0; // Simülasyon zamanı
 
+        this.tabuSearch = null; // TABU Search nesnesi
+        this.optimizedRoute = []; // Optimize edilmiş rota
+        this.totalCost = 0; // Toplam maliyet
+
         this.setupControls();
     }
 
@@ -59,10 +63,55 @@ class SpaceSimulation {
     
         this.simulationTime = 0; // Zaman sıfırla
         console.log(`Toplam ${satelliteCount} uydu oluşturuldu.`);
+    
+        // TABU Search optimizasyonu
+        this.optimizeRoute();
+
         this.animate();
+    }
+
+    optimizeRoute() {
+        console.log('TABU Search başlatılıyor...');
+        if (!this.tabuSearch) {
+            this.tabuSearch = new TabuSearch(this.satellites, this.rocket);
+        }
+    
+        const optimizedResult = this.tabuSearch.optimize();
+    
+        this.rocket.followOptimizedRoute(optimizedResult.route);
+        this.infoPanel.updateCost(optimizedResult.cost);
+        this.saveOptimizedRouteAsText(optimizedResult.route, optimizedResult.cost);
+    }
+    
+    saveRouteAsText() {
+        const routeText = `Optimal Route: ${this.optimizedRoute.map(node => node.name).join(' → ')}\nTotal Cost: ${this.totalCost}`;
+        const blob = new Blob([routeText], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'optimal_route.txt';
+        link.click();
+
+        console.log('Rota bilgileri .txt dosyasına kaydedildi.');
+    }
+
+
+    saveOptimizedRouteAsText(route, totalCost) {
+        const routeText = `
+            Optimal Rota: ${route.map(node => node.name).join(' → ')}
+            Toplam Maliyet: ${totalCost.toFixed(2)}
+        `;
+    
+        const blob = new Blob([routeText], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `optimized_route_${Date.now()}.txt`;
+        link.click();
+    
+        console.log('TABU Search tamamlandı ve rota indirildi.');
     }
     
 
+    
     setupControls() {
         const speedControl = document.getElementById('speedControl');
         speedControl.addEventListener('input', (event) => {
@@ -76,11 +125,13 @@ class SpaceSimulation {
         const startButton = document.getElementById('startButton');
         startButton.addEventListener('click', () => {
             if (!this.simulationRunning) {
-                this.simulationRunning = true;
-                this.simulationPaused = false;
-                this.initialize();
-            }
+            this.simulationRunning = true;
+            this.simulationPaused = false;
+            this.initialize();
+            this.optimizeRoute(); // TABU Search başlat
+        }
         });
+
 
         const stopButton = document.getElementById('stopButton');
         stopButton.addEventListener('click', () => {
@@ -96,21 +147,32 @@ class SpaceSimulation {
                 this.animate();
             }
         });
+
+        const w1Slider = document.getElementById('w1-slider');
+        const w2Slider = document.getElementById('w2-slider');
+
+        w1Slider.addEventListener('input', (e) => {
+            CONSTANTS.W1 = parseFloat(e.target.value);
+            this.optimizeRoute();
+        });
+
+        w2Slider.addEventListener('input', (e) => {
+            CONSTANTS.W2 = parseFloat(e.target.value);
+            this.optimizeRoute();
+        });
     }
 
+
+
+    
     animate() {
-        if (!this.simulationRunning) {
-            this.simulationPaused = true;
-            return;
-        }
+        if (!this.simulationRunning) return;
     
         requestAnimationFrame(this.animate.bind(this));
     
-        const deltaTime = CONSTANTS.SIMULATION_SPEED * (1 / 60); 
-        this.simulationTime += deltaTime;
-    
-        console.log(`Delta Time: ${deltaTime.toFixed(4)} saniye`);
-    
+        const deltaTime = CONSTANTS.SIMULATION_SPEED * (1 / 60);
+        this.simulationTime += deltaTime; // Simülasyon zamanını güncelle
+        
         this.earth.rotate(deltaTime);
         this.moon.update(deltaTime);
         this.satellites.forEach(satellite => satellite.update(deltaTime));
@@ -127,17 +189,12 @@ class SpaceSimulation {
     }
 
     showPath() {
-        const points = [
-            this.currentPath.start,
-            this.currentPath.midPoint,
-            this.currentPath.target
-        ];
-    
+        const points = this.optimizedRoute.map(node => node.mesh.position);
+
         const pathGeometry = new THREE.BufferGeometry().setFromPoints(points);
         const pathMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
         const pathLine = new THREE.Line(pathGeometry, pathMaterial);
-    
+
         this.sceneManager.scene.add(pathLine);
     }
-    
 }

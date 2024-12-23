@@ -38,7 +38,8 @@ class Satellite {
 
     update(deltaTime) {
         this.age += deltaTime / CONSTANTS.SECONDS_IN_A_DAY; // Zamanı gün cinsine çevir
-    
+        this.mesh.rotation.y += deltaTime * CONSTANTS.SATELLITE_ROTATION_SPEED;
+
         const userData = this.mesh.userData;
         userData.angle += (2 * Math.PI / CONSTANTS.SATELLITE_ORBIT_PERIOD) * deltaTime;
     
@@ -50,8 +51,14 @@ class Satellite {
     }
     
     getRemainingLifetime() {
-        return Math.max(this.lifetime - this.age / 365, 0).toFixed(2); // Yıllık kalan süre
+        if (typeof this.age !== 'number' || typeof this.lifetime !== 'number') {
+            console.warn('Uydu yaşı veya ömrü düzgün tanımlanmamış.');
+            return 0;
+        }
+    
+        return Math.max(this.lifetime - this.age, 0); // Negatif değer döndürülmez
     }
+    
     
 
     calculatePosition(userData) {
